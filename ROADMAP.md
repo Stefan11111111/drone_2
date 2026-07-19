@@ -168,7 +168,7 @@ the note into generic documentation or paste large source listings.
 
 ### 15 — Map target tracks across the DDS boundary
 
-- [ ] **AI prompt:** Complete roadmap step 15 only. Start `drone_dds_transport` with explicit,
+- [x] **AI prompt:** Complete roadmap step 15 only. Start `drone_dds_transport` with explicit,
   bidirectional conversion between domain and generated target-track values. Test round trips and
   rejection of malformed wire data; add no participant or endpoint. Add
   `docs/learning/15-target-mapping.md`, explaining why serialization types stop at the transport
@@ -177,7 +177,7 @@ the note into generic documentation or paste large source listings.
 
 ### 16 — Map drone state across the DDS boundary
 
-- [ ] **AI prompt:** Complete roadmap step 16 only. Add explicit, bidirectional conversion for drone
+- [x] **AI prompt:** Complete roadmap step 16 only. Add explicit, bidirectional conversion for drone
   state, including exhaustive status mapping and malformed-input tests. Add no DDS entities. Add
   `docs/learning/16-drone-state-mapping.md`, explaining how a mapping layer protects core code from
   generated API and schema changes. Acceptance: every domain status maps deliberately and round-trip
@@ -185,7 +185,7 @@ the note into generic documentation or paste large source listings.
 
 ### 17 — Map commands and events across the DDS boundary
 
-- [ ] **AI prompt:** Complete roadmap step 17 only. Add and test explicit conversions for assignment,
+- [x] **AI prompt:** Complete roadmap step 17 only. Add and test explicit conversions for assignment,
   interception command, and explosion event. Keep mapping errors visible to callers rather than
   silently manufacturing valid values. Add `docs/learning/17-control-event-mapping.md`, explaining
   validation at a distributed trust boundary. Acceptance: round-trip and malformed-wire tests cover
