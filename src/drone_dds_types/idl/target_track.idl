@@ -1,0 +1,20 @@
+module drone
+{
+    module dds
+    {
+        @nested
+        struct CartesianPosition
+        {
+            double x;
+            double y;
+            double z;
+        };
+
+        struct TargetTrack
+        {
+            @key unsigned long long target_id;
+            CartesianPosition position;
+            long long measured_at_ms;
+        };
+    };
+};

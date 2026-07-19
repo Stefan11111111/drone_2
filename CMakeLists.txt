@@ -31,6 +31,53 @@ find_package(fastcdr 2.3.5 EXACT CONFIG REQUIRED)
 find_package(fastdds 3.3.0 EXACT CONFIG REQUIRED)
 include(GoogleTest)
 
+find_program(FASTDDSGEN_EXECUTABLE NAMES fastddsgen REQUIRED)
+execute_process(
+  COMMAND ${FASTDDSGEN_EXECUTABLE} -version
+  RESULT_VARIABLE fastddsgen_result
+  OUTPUT_VARIABLE fastddsgen_version_output
+  ERROR_VARIABLE fastddsgen_version_error
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  ERROR_STRIP_TRAILING_WHITESPACE)
+if(NOT fastddsgen_result EQUAL 0)
+  message(
+    FATAL_ERROR
+      "Failed to query Fast DDS-Gen at ${FASTDDSGEN_EXECUTABLE}: ${fastddsgen_version_error}")
+endif()
+string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" FASTDDSGEN_VERSION "${fastddsgen_version_output}")
+if(NOT FASTDDSGEN_VERSION STREQUAL "4.2.0")
+  message(
+    FATAL_ERROR
+      "Fast DDS-Gen 4.2.0 is required; ${FASTDDSGEN_EXECUTABLE} reported '${fastddsgen_version_output}'")
+endif()
+
+set(target_track_idl ${CMAKE_CURRENT_SOURCE_DIR}/src/drone_dds_types/idl/target_track.idl)
+set(drone_dds_generated_dir ${CMAKE_CURRENT_BINARY_DIR}/generated/drone_dds_types)
+set(
+  target_track_generated_files
+  ${drone_dds_generated_dir}/target_track.hpp
+  ${drone_dds_generated_dir}/target_trackCdrAux.hpp
+  ${drone_dds_generated_dir}/target_trackCdrAux.ipp
+  ${drone_dds_generated_dir}/target_trackPubSubTypes.cxx
+  ${drone_dds_generated_dir}/target_trackPubSubTypes.hpp
+  ${drone_dds_generated_dir}/target_trackTypeObjectSupport.cxx
+  ${drone_dds_generated_dir}/target_trackTypeObjectSupport.hpp)
+add_custom_command(
+  OUTPUT ${target_track_generated_files}
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${drone_dds_generated_dir}
+  COMMAND ${FASTDDSGEN_EXECUTABLE} -replace -d ${drone_dds_generated_dir} ${target_track_idl}
+  DEPENDS ${target_track_idl}
+  COMMENT "Generating TargetTrack wire type from IDL"
+  VERBATIM)
+
+add_library(
+  drone_dds_types
+  ${drone_dds_generated_dir}/target_trackPubSubTypes.cxx
+  ${drone_dds_generated_dir}/target_trackTypeObjectSupport.cxx)
+target_include_directories(
+  drone_dds_types SYSTEM PUBLIC $<BUILD_INTERFACE:${drone_dds_generated_dir}>)
+target_link_libraries(drone_dds_types PUBLIC fastcdr fastdds)
+
 add_library(
   drone_domain
   src/drone_domain/assignment.cpp
@@ -68,6 +115,10 @@ gtest_discover_tests(domain_values_test)
 add_executable(target_track_test tests/target_track_test.cpp)
 target_link_libraries(target_track_test PRIVATE GTest::gtest_main drone_domain)
 gtest_discover_tests(target_track_test)
+
+add_executable(target_track_wire_type_test tests/target_track_wire_type_test.cpp)
+target_link_libraries(target_track_wire_type_test PRIVATE GTest::gtest_main drone_dds_types)
+gtest_discover_tests(target_track_wire_type_test)
 
 add_executable(drone_state_test tests/drone_state_test.cpp)
 target_link_libraries(drone_state_test PRIVATE GTest::gtest_main drone_domain)

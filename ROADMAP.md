@@ -134,7 +134,7 @@ the note into generic documentation or paste large source listings.
 
 ### 11 — Generate the target-track wire type
 
-- [ ] **AI prompt:** Complete roadmap step 11 only. Create the `drone_dds_types` target and the
+- [x] **AI prompt:** Complete roadmap step 11 only. Create the `drone_dds_types` target and the
   smallest IDL contract for `TargetTrack`, including the approved key, and integrate reproducible
   Fast DDS-Gen generation according to step 01's policy. Do not add a DataWriter or DataReader. Add
   `docs/learning/11-idl-target-track.md`, explaining IDL, generated C++ types, `TopicDataType`,
