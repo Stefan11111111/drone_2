@@ -27,8 +27,14 @@ add_executable(cpp26_build_probe tests/cpp26_build_probe.cpp)
 add_test(NAME cpp26_build_probe COMMAND cpp26_build_probe)
 
 find_package(GTest 1.17...<1.18 CONFIG REQUIRED)
+find_package(fastcdr 2.3.5 EXACT CONFIG REQUIRED)
+find_package(fastdds 3.3.0 EXACT CONFIG REQUIRED)
 include(GoogleTest)
 
 add_executable(verification_workflow_test tests/verification_workflow_test.cpp)
 target_link_libraries(verification_workflow_test PRIVATE GTest::gtest_main)
 gtest_discover_tests(verification_workflow_test)
+
+add_executable(domain_participant_smoke_test tests/domain_participant_smoke_test.cpp)
+target_link_libraries(domain_participant_smoke_test PRIVATE GTest::gtest_main fastdds)
+gtest_discover_tests(domain_participant_smoke_test)
