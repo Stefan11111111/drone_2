@@ -124,7 +124,7 @@ the note into generic documentation or paste large source listings.
 
 ### 10 — Define the DDS topic catalog and QoS hypotheses
 
-- [ ] **AI prompt:** Complete roadmap step 10 only. Create a concise DDS topic catalog listing each
+- [x] **AI prompt:** Complete roadmap step 10 only. Create a concise DDS topic catalog listing each
   initial topic's purpose, wire type, key, producer, consumers, update pattern, and proposed
   Reliability, Durability, History, and resource-limit behavior. Explain every non-default QoS
   choice from scenario semantics and call out choices that need experimental confirmation; add no

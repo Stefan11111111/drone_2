@@ -50,6 +50,13 @@ add_executable(verification_workflow_test tests/verification_workflow_test.cpp)
 target_link_libraries(verification_workflow_test PRIVATE GTest::gtest_main)
 gtest_discover_tests(verification_workflow_test)
 
+add_test(
+  NAME VerificationWorkflow.TopicCatalog
+  COMMAND
+    ${CMAKE_COMMAND}
+    -DCATALOG=${CMAKE_CURRENT_SOURCE_DIR}/docs/dds-topic-catalog.md
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/verify_topic_catalog.cmake)
+
 add_executable(domain_participant_smoke_test tests/domain_participant_smoke_test.cpp)
 target_link_libraries(domain_participant_smoke_test PRIVATE GTest::gtest_main fastdds)
 gtest_discover_tests(domain_participant_smoke_test)
