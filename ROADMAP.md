@@ -177,7 +177,7 @@ the note into generic documentation or paste large source listings.
 
 ### 16 — Map drone state across the DDS boundary
 
-- [ ] **AI prompt:** Complete roadmap step 16 only. Add explicit, bidirectional conversion for drone
+- [x] **AI prompt:** Complete roadmap step 16 only. Add explicit, bidirectional conversion for drone
   state, including exhaustive status mapping and malformed-input tests. Add no DDS entities. Add
   `docs/learning/16-drone-state-mapping.md`, explaining how a mapping layer protects core code from
   generated API and schema changes. Acceptance: every domain status maps deliberately and round-trip
