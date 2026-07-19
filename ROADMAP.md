@@ -151,7 +151,7 @@ the note into generic documentation or paste large source listings.
 
 ### 13 — Generate the control wire types
 
-- [ ] **AI prompt:** Complete roadmap step 13 only. Extend the IDL with the assignment and
+- [x] **AI prompt:** Complete roadmap step 13 only. Extend the IDL with the assignment and
   interception-command contracts, using the topic catalog's keys and bounded fields where the
   approved model requires them. Add generation and compile coverage only. Add
   `docs/learning/13-idl-control.md`, explaining what DDS does and does not guarantee when a command
@@ -160,7 +160,7 @@ the note into generic documentation or paste large source listings.
 
 ### 14 — Generate the explosion-event wire type
 
-- [ ] **AI prompt:** Complete roadmap step 14 only. Extend the IDL with the explosion-event contract
+- [x] **AI prompt:** Complete roadmap step 14 only. Extend the IDL with the explosion-event contract
   and its approved key, then add generation and compile coverage. Do not implement the simulated
   effect or a publisher. Add `docs/learning/14-idl-event.md`, explaining how event identity and DDS
   history affect duplicate handling and late joiners. Acceptance: the generated type compiles and
