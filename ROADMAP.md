@@ -98,7 +98,7 @@ the note into generic documentation or paste large source listings.
 
 ### 07 — Model drone state
 
-- [ ] **AI prompt:** Complete roadmap step 07 only. Add the participant-neutral `DroneState` and the
+- [x] **AI prompt:** Complete roadmap step 07 only. Add the participant-neutral `DroneState` and the
   smallest lifecycle/status vocabulary required for availability, assignment, movement, and
   outcome reporting. Test its invariants and transitions only where they belong to the value model.
   Add `docs/learning/07-drone-state.md`, explaining why published state is a contract rather than a
