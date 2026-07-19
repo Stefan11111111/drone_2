@@ -18,8 +18,17 @@ endif()
 set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 enable_testing()
 
 add_executable(cpp26_build_probe tests/cpp26_build_probe.cpp)
 add_test(NAME cpp26_build_probe COMMAND cpp26_build_probe)
+
+find_package(GTest 1.17...<1.18 CONFIG REQUIRED)
+include(GoogleTest)
+
+add_executable(verification_workflow_test tests/verification_workflow_test.cpp)
+target_link_libraries(verification_workflow_test PRIVATE GTest::gtest_main)
+gtest_discover_tests(verification_workflow_test)

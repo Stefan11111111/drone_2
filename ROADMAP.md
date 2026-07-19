@@ -60,7 +60,7 @@ the note into generic documentation or paste large source listings.
 
 ### 03 — Establish the verification workflow
 
-- [ ] **AI prompt:** Complete roadmap step 03 only. Add the selected unit-test integration and
+- [x] **AI prompt:** Complete roadmap step 03 only. Add the selected unit-test integration and
   repository helpers or configuration for formatting and static analysis, then replace the
   verification placeholder in `AGENTS.md` with the canonical commands. Keep the sample test focused
   on proving the workflow. Add `docs/learning/03-verification-loop.md`, explaining how rapid tests

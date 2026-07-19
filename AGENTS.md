@@ -47,10 +47,18 @@
 
 ## Verification
 
-- Roadmap step 03 shall replace this temporary guidance with canonical format, configure, static
-  analysis, build, and test commands.
-- Until then, discover the commands supported by the current repository and record every command run
-  in the step's learning note.
+- Run the canonical workflow from the repository root, in this order:
+
+  ```bash
+  ./scripts/format.sh --check
+  cmake --preset development
+  ./scripts/run-clang-tidy.sh
+  cmake --build --preset development
+  ctest --preset development -R '^VerificationWorkflow\.'
+  ctest --preset development
+  ```
+
+- Use `./scripts/format.sh --write` to format C and C++ files before running the format check.
 - For each step, run focused tests first and the complete available suite before marking the step
   complete. Process-level tests shall have bounded waits, actionable failure output, and reliable
   child-process cleanup; do not use fixed sleeps as a substitute for DDS match or readiness signals.
