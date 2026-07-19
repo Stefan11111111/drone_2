@@ -36,6 +36,7 @@ add_library(
   src/drone_domain/drone_id.cpp
   src/drone_domain/position.cpp
   src/drone_domain/target_id.cpp
+  src/drone_domain/target_track.cpp
   src/drone_domain/timestamp.cpp)
 target_include_directories(drone_domain PUBLIC include)
 
@@ -50,3 +51,7 @@ gtest_discover_tests(domain_participant_smoke_test)
 add_executable(domain_values_test tests/domain_values_test.cpp)
 target_link_libraries(domain_values_test PRIVATE GTest::gtest_main drone_domain)
 gtest_discover_tests(domain_values_test)
+
+add_executable(target_track_test tests/target_track_test.cpp)
+target_link_libraries(target_track_test PRIVATE GTest::gtest_main drone_domain)
+gtest_discover_tests(target_track_test)

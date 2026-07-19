@@ -89,7 +89,7 @@ the note into generic documentation or paste large source listings.
 
 ### 06 — Model a target track
 
-- [ ] **AI prompt:** Complete roadmap step 06 only. Add the participant-neutral `TargetTrack` model
+- [x] **AI prompt:** Complete roadmap step 06 only. Add the participant-neutral `TargetTrack` model
   needed to identify a target and carry its latest measured position and time. Test construction,
   equality, and any validation that protects a real invariant; do not add serialization. Add
   `docs/learning/06-target-track.md`, explaining how a data-centric system distributes state rather
