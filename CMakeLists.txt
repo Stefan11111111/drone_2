@@ -67,7 +67,7 @@ add_custom_command(
   COMMAND ${CMAKE_COMMAND} -E make_directory ${drone_dds_generated_dir}
   COMMAND ${FASTDDSGEN_EXECUTABLE} -replace -d ${drone_dds_generated_dir} ${target_track_idl}
   DEPENDS ${target_track_idl}
-  COMMENT "Generating TargetTrack wire type from IDL"
+  COMMENT "Generating drone DDS wire types from IDL"
   VERBATIM)
 
 add_library(
@@ -119,6 +119,10 @@ gtest_discover_tests(target_track_test)
 add_executable(target_track_wire_type_test tests/target_track_wire_type_test.cpp)
 target_link_libraries(target_track_wire_type_test PRIVATE GTest::gtest_main drone_dds_types)
 gtest_discover_tests(target_track_wire_type_test)
+
+add_executable(drone_state_wire_type_test tests/drone_state_wire_type_test.cpp)
+target_link_libraries(drone_state_wire_type_test PRIVATE GTest::gtest_main drone_dds_types)
+gtest_discover_tests(drone_state_wire_type_test)
 
 add_executable(drone_state_test tests/drone_state_test.cpp)
 target_link_libraries(drone_state_test PRIVATE GTest::gtest_main drone_domain)

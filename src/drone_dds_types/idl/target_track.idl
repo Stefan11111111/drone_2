@@ -16,5 +16,28 @@ module drone
             CartesianPosition position;
             long long measured_at_ms;
         };
+
+        enum DroneStatus
+        {
+            @value(0)
+            DRONE_AVAILABLE,
+            @value(1)
+            DRONE_ASSIGNED,
+            @value(2)
+            DRONE_INTERCEPTING,
+            @value(3)
+            DRONE_INTERCEPTION_SUCCEEDED,
+            @value(4)
+            DRONE_INTERCEPTION_FAILED
+        };
+
+        struct DroneState
+        {
+            @key unsigned long long drone_id;
+            CartesianPosition position;
+            long long reported_at_ms;
+            DroneStatus status;
+            @optional unsigned long long assigned_target_id;
+        };
     };
 };
