@@ -116,7 +116,7 @@ the note into generic documentation or paste large source listings.
 
 ### 09 — Model the explosion event
 
-- [ ] **AI prompt:** Complete roadmap step 09 only. Add the participant-neutral event emitted when
+- [x] **AI prompt:** Complete roadmap step 09 only. Add the participant-neutral event emitted when
   an interceptor reaches its assigned target, carrying only the operational facts consumers need.
   Test its value semantics and invariants. Add `docs/learning/09-explosion-event.md`, explaining the
   difference between an event and continuously updated state. Acceptance: the console can correlate
