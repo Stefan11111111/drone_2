@@ -47,7 +47,7 @@ touch src/drone_dds_types/idl/target_track.idl
 cmake --build --preset development --target drone_dds_types --verbose
 ```
 
-The build prints `Generating TargetTrack wire type from IDL` before recompiling the generated
+The build prints `Generating drone DDS wire types from IDL` before recompiling the generated
 sources.
 
 ## Takeaway

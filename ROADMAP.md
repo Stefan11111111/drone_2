@@ -143,7 +143,7 @@ the note into generic documentation or paste large source listings.
 
 ### 12 — Generate the drone-state wire type
 
-- [ ] **AI prompt:** Complete roadmap step 12 only. Extend the IDL with the `DroneState` wire
+- [x] **AI prompt:** Complete roadmap step 12 only. Extend the IDL with the `DroneState` wire
   contract and approved key while preserving the participant-neutral vocabulary. Add generation and
   compile coverage but no DDS endpoint. Add `docs/learning/12-idl-drone-state.md`, explaining how IDL
   enums and fields become serialized C++ data and why wire-contract evolution must be deliberate.
