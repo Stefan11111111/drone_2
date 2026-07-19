@@ -80,7 +80,7 @@ the note into generic documentation or paste large source listings.
 
 ### 05 — Add identifiers, position, and time values
 
-- [ ] **AI prompt:** Complete roadmap step 05 only. Create the `drone_domain` library with strongly
+- [x] **AI prompt:** Complete roadmap step 05 only. Create the `drone_domain` library with strongly
   typed target and drone identifiers, a position value, and the minimal time representation needed
   by the vision. Add focused value-semantic tests; add no DDS includes. Add
   `docs/learning/05-domain-values.md`, explaining why application values are kept independent of
