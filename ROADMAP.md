@@ -41,7 +41,7 @@ the note into generic documentation or paste large source listings.
 
 ### 01 — Record the toolchain and dependency decisions
 
-- [ ] **AI prompt:** Complete roadmap step 01 only. Inspect the available development environment
+- [x] **AI prompt:** Complete roadmap step 01 only. Inspect the available development environment
   and create a small decision record for the build system, test framework, supported compiler,
   formatter, static analysis, Fast DDS acquisition/version, compatible Fast DDS-Gen version, and
   generated-source policy. Resolve only tooling decisions; do not add production code. If a
