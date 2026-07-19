@@ -52,7 +52,7 @@ the note into generic documentation or paste large source listings.
 
 ### 02 — Bootstrap the C++26 build
 
-- [ ] **AI prompt:** Complete roadmap step 02 only. Add the smallest build skeleton that configures
+- [x] **AI prompt:** Complete roadmap step 02 only. Add the smallest build skeleton that configures
   the repository as strict C++26 with compiler extensions disabled, plus one trivial executable or
   test that proves the selected compiler accepts the configuration. Do not add Fast DDS or domain
   behavior yet. Add `docs/learning/02-build-skeleton.md`, explaining what will be compiled by this
