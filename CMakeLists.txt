@@ -95,7 +95,10 @@ target_include_directories(drone_domain PUBLIC include)
 
 add_library(
   drone_dds_transport
+  src/drone_dds_transport/assignment_mapping.cpp
   src/drone_dds_transport/drone_state_mapping.cpp
+  src/drone_dds_transport/explosion_event_mapping.cpp
+  src/drone_dds_transport/interception_command_mapping.cpp
   src/drone_dds_transport/target_track_mapping.cpp)
 target_include_directories(drone_dds_transport PUBLIC include)
 target_link_libraries(drone_dds_transport PUBLIC drone_dds_types drone_domain)
@@ -134,6 +137,10 @@ gtest_discover_tests(target_track_mapping_test)
 add_executable(drone_state_mapping_test tests/drone_state_mapping_test.cpp)
 target_link_libraries(drone_state_mapping_test PRIVATE GTest::gtest_main drone_dds_transport)
 gtest_discover_tests(drone_state_mapping_test)
+
+add_executable(control_event_mapping_test tests/control_event_mapping_test.cpp)
+target_link_libraries(control_event_mapping_test PRIVATE GTest::gtest_main drone_dds_transport)
+gtest_discover_tests(control_event_mapping_test)
 
 add_executable(drone_state_wire_type_test tests/drone_state_wire_type_test.cpp)
 target_link_libraries(drone_state_wire_type_test PRIVATE GTest::gtest_main drone_dds_types)

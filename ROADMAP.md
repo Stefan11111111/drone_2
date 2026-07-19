@@ -185,7 +185,7 @@ the note into generic documentation or paste large source listings.
 
 ### 17 — Map commands and events across the DDS boundary
 
-- [ ] **AI prompt:** Complete roadmap step 17 only. Add and test explicit conversions for assignment,
+- [x] **AI prompt:** Complete roadmap step 17 only. Add and test explicit conversions for assignment,
   interception command, and explosion event. Keep mapping errors visible to callers rather than
   silently manufacturing valid values. Add `docs/learning/17-control-event-mapping.md`, explaining
   validation at a distributed trust boundary. Acceptance: round-trip and malformed-wire tests cover
