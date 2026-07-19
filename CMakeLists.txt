@@ -31,6 +31,14 @@ find_package(fastcdr 2.3.5 EXACT CONFIG REQUIRED)
 find_package(fastdds 3.3.0 EXACT CONFIG REQUIRED)
 include(GoogleTest)
 
+add_library(
+  drone_domain
+  src/drone_domain/drone_id.cpp
+  src/drone_domain/position.cpp
+  src/drone_domain/target_id.cpp
+  src/drone_domain/timestamp.cpp)
+target_include_directories(drone_domain PUBLIC include)
+
 add_executable(verification_workflow_test tests/verification_workflow_test.cpp)
 target_link_libraries(verification_workflow_test PRIVATE GTest::gtest_main)
 gtest_discover_tests(verification_workflow_test)
@@ -38,3 +46,7 @@ gtest_discover_tests(verification_workflow_test)
 add_executable(domain_participant_smoke_test tests/domain_participant_smoke_test.cpp)
 target_link_libraries(domain_participant_smoke_test PRIVATE GTest::gtest_main fastdds)
 gtest_discover_tests(domain_participant_smoke_test)
+
+add_executable(domain_values_test tests/domain_values_test.cpp)
+target_link_libraries(domain_values_test PRIVATE GTest::gtest_main drone_domain)
+gtest_discover_tests(domain_values_test)
