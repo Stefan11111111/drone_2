@@ -69,7 +69,7 @@ the note into generic documentation or paste large source listings.
 
 ### 04 — Prove that Fast DDS links
 
-- [ ] **AI prompt:** Complete roadmap step 04 only. Integrate the approved Fast DDS dependency into
+- [x] **AI prompt:** Complete roadmap step 04 only. Integrate the approved Fast DDS dependency into
   the build and add a minimal smoke target that creates and cleanly deletes one named
   `DomainParticipant`; do not create a Topic, Publisher, or Subscriber. Add
   `docs/learning/04-domain-participant.md`, explaining DDS domains, participant identity, and why a
