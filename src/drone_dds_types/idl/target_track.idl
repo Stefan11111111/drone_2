@@ -39,5 +39,27 @@ module drone
             DroneStatus status;
             @optional unsigned long long assigned_target_id;
         };
+
+        struct Assignment
+        {
+            @key unsigned long long drone_id;
+            unsigned long long target_id;
+        };
+
+        struct InterceptionCommand
+        {
+            @key unsigned long long command_id;
+            unsigned long long drone_id;
+            unsigned long long target_id;
+        };
+
+        struct ExplosionEvent
+        {
+            @key unsigned long long event_id;
+            unsigned long long drone_id;
+            unsigned long long target_id;
+            CartesianPosition position;
+            long long occurred_at_ms;
+        };
     };
 };

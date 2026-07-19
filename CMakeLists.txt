@@ -124,6 +124,14 @@ add_executable(drone_state_wire_type_test tests/drone_state_wire_type_test.cpp)
 target_link_libraries(drone_state_wire_type_test PRIVATE GTest::gtest_main drone_dds_types)
 gtest_discover_tests(drone_state_wire_type_test)
 
+add_executable(control_wire_types_test tests/control_wire_types_test.cpp)
+target_link_libraries(control_wire_types_test PRIVATE GTest::gtest_main drone_dds_types)
+gtest_discover_tests(control_wire_types_test)
+
+add_executable(explosion_event_wire_type_test tests/explosion_event_wire_type_test.cpp)
+target_link_libraries(explosion_event_wire_type_test PRIVATE GTest::gtest_main drone_dds_types)
+gtest_discover_tests(explosion_event_wire_type_test)
+
 add_executable(drone_state_test tests/drone_state_test.cpp)
 target_link_libraries(drone_state_test PRIVATE GTest::gtest_main drone_domain)
 gtest_discover_tests(drone_state_test)
