@@ -33,8 +33,11 @@ include(GoogleTest)
 
 add_library(
   drone_domain
+  src/drone_domain/assignment.cpp
   src/drone_domain/drone_id.cpp
   src/drone_domain/drone_state.cpp
+  src/drone_domain/interception_command.cpp
+  src/drone_domain/interception_command_id.cpp
   src/drone_domain/position.cpp
   src/drone_domain/target_id.cpp
   src/drone_domain/target_track.cpp
@@ -60,3 +63,7 @@ gtest_discover_tests(target_track_test)
 add_executable(drone_state_test tests/drone_state_test.cpp)
 target_link_libraries(drone_state_test PRIVATE GTest::gtest_main drone_domain)
 gtest_discover_tests(drone_state_test)
+
+add_executable(control_messages_test tests/control_messages_test.cpp)
+target_link_libraries(control_messages_test PRIVATE GTest::gtest_main drone_domain)
+gtest_discover_tests(control_messages_test)

@@ -107,7 +107,7 @@ the note into generic documentation or paste large source listings.
 
 ### 08 — Model assignment and interception commands
 
-- [ ] **AI prompt:** Complete roadmap step 08 only. Add separate participant-neutral values for
+- [x] **AI prompt:** Complete roadmap step 08 only. Add separate participant-neutral values for
   assigning one drone to one target and commanding that assigned drone to start interception.
   Include identifiers needed to detect duplicates or stale intent if the approved contract calls
   for them. Add `docs/learning/08-control-messages.md`, explaining the difference between state data
