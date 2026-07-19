@@ -168,7 +168,7 @@ the note into generic documentation or paste large source listings.
 
 ### 15 — Map target tracks across the DDS boundary
 
-- [ ] **AI prompt:** Complete roadmap step 15 only. Start `drone_dds_transport` with explicit,
+- [x] **AI prompt:** Complete roadmap step 15 only. Start `drone_dds_transport` with explicit,
   bidirectional conversion between domain and generated target-track values. Test round trips and
   rejection of malformed wire data; add no participant or endpoint. Add
   `docs/learning/15-target-mapping.md`, explaining why serialization types stop at the transport
