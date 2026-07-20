@@ -204,7 +204,7 @@ the note into generic documentation or paste large source listings.
 
 ### 19 — Round-trip one target track in process
 
-- [ ] **AI prompt:** Complete roadmap step 19 only. Using two participants, create the minimum
+- [x] **AI prompt:** Complete roadmap step 19 only. Using two participants, create the minimum
   Publisher, Subscriber, Topic, DataWriter, and DataReader support needed to send one target track
   through Fast DDS and receive it through the domain mapping. Apply only the target QoS from the
   catalog and avoid a speculative generic transport framework. Add

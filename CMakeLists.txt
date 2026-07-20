@@ -100,7 +100,10 @@ add_library(
   src/drone_dds_transport/drone_state_mapping.cpp
   src/drone_dds_transport/explosion_event_mapping.cpp
   src/drone_dds_transport/interception_command_mapping.cpp
-  src/drone_dds_transport/target_track_mapping.cpp)
+  src/drone_dds_transport/target_track_reader.cpp
+  src/drone_dds_transport/target_track_mapping.cpp
+  src/drone_dds_transport/target_track_topic.cpp
+  src/drone_dds_transport/target_track_writer.cpp)
 target_include_directories(drone_dds_transport PUBLIC include)
 target_link_libraries(drone_dds_transport PUBLIC drone_dds_types drone_domain fastdds)
 
@@ -138,6 +141,10 @@ gtest_discover_tests(target_track_wire_type_test)
 add_executable(target_track_mapping_test tests/target_track_mapping_test.cpp)
 target_link_libraries(target_track_mapping_test PRIVATE GTest::gtest_main drone_dds_transport)
 gtest_discover_tests(target_track_mapping_test)
+
+add_executable(target_track_pub_sub_test tests/target_track_pub_sub_test.cpp)
+target_link_libraries(target_track_pub_sub_test PRIVATE GTest::gtest_main drone_dds_transport)
+gtest_discover_tests(target_track_pub_sub_test)
 
 add_executable(drone_state_mapping_test tests/drone_state_mapping_test.cpp)
 target_link_libraries(drone_state_mapping_test PRIVATE GTest::gtest_main drone_dds_transport)
