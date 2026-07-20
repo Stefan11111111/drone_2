@@ -37,6 +37,8 @@ class TargetTrackTopic final
 };
 
 [[nodiscard]] eprosima::fastdds::dds::DataWriterQos targetTrackWriterQos();
+[[nodiscard]] eprosima::fastdds::dds::DataWriterQos
+targetTrackBestEffortWriterQosForDiscoveryExperiment();
 [[nodiscard]] eprosima::fastdds::dds::DataReaderQos targetTrackReaderQos();
 
 } // namespace drone::dds_transport

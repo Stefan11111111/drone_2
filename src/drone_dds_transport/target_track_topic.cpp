@@ -80,6 +80,13 @@ eprosima::fastdds::dds::DataWriterQos targetTrackWriterQos()
     return qos;
 }
 
+eprosima::fastdds::dds::DataWriterQos targetTrackBestEffortWriterQosForDiscoveryExperiment()
+{
+    auto qos = targetTrackWriterQos();
+    qos.reliability().kind = eprosima::fastdds::dds::BEST_EFFORT_RELIABILITY_QOS;
+    return qos;
+}
+
 eprosima::fastdds::dds::DataReaderQos targetTrackReaderQos()
 {
     eprosima::fastdds::dds::DataReaderQos qos;

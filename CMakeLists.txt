@@ -146,6 +146,10 @@ add_executable(target_track_pub_sub_test tests/target_track_pub_sub_test.cpp)
 target_link_libraries(target_track_pub_sub_test PRIVATE GTest::gtest_main drone_dds_transport)
 gtest_discover_tests(target_track_pub_sub_test)
 
+add_executable(target_track_discovery_test tests/target_track_discovery_test.cpp)
+target_link_libraries(target_track_discovery_test PRIVATE GTest::gtest_main drone_dds_transport)
+gtest_discover_tests(target_track_discovery_test)
+
 add_executable(drone_state_mapping_test tests/drone_state_mapping_test.cpp)
 target_link_libraries(drone_state_mapping_test PRIVATE GTest::gtest_main drone_dds_transport)
 gtest_discover_tests(drone_state_mapping_test)
