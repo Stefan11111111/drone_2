@@ -96,12 +96,13 @@ target_include_directories(drone_domain PUBLIC include)
 add_library(
   drone_dds_transport
   src/drone_dds_transport/assignment_mapping.cpp
+  src/drone_dds_transport/domain_participant_owner.cpp
   src/drone_dds_transport/drone_state_mapping.cpp
   src/drone_dds_transport/explosion_event_mapping.cpp
   src/drone_dds_transport/interception_command_mapping.cpp
   src/drone_dds_transport/target_track_mapping.cpp)
 target_include_directories(drone_dds_transport PUBLIC include)
-target_link_libraries(drone_dds_transport PUBLIC drone_dds_types drone_domain)
+target_link_libraries(drone_dds_transport PUBLIC drone_dds_types drone_domain fastdds)
 
 add_executable(verification_workflow_test tests/verification_workflow_test.cpp)
 target_link_libraries(verification_workflow_test PRIVATE GTest::gtest_main)
@@ -117,6 +118,10 @@ add_test(
 add_executable(domain_participant_smoke_test tests/domain_participant_smoke_test.cpp)
 target_link_libraries(domain_participant_smoke_test PRIVATE GTest::gtest_main fastdds)
 gtest_discover_tests(domain_participant_smoke_test)
+
+add_executable(domain_participant_owner_test tests/domain_participant_owner_test.cpp)
+target_link_libraries(domain_participant_owner_test PRIVATE GTest::gtest_main drone_dds_transport)
+gtest_discover_tests(domain_participant_owner_test)
 
 add_executable(domain_values_test tests/domain_values_test.cpp)
 target_link_libraries(domain_values_test PRIVATE GTest::gtest_main drone_domain)
