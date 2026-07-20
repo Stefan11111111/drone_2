@@ -93,6 +93,10 @@ add_library(
   src/drone_domain/timestamp.cpp)
 target_include_directories(drone_domain PUBLIC include)
 
+add_library(observer_core src/observer_core/target_tracker.cpp)
+target_include_directories(observer_core PUBLIC include)
+target_link_libraries(observer_core PUBLIC drone_domain)
+
 add_library(
   drone_dds_transport
   src/drone_dds_transport/assignment_mapping.cpp
@@ -181,3 +185,7 @@ gtest_discover_tests(explosion_event_test)
 add_executable(control_messages_test tests/control_messages_test.cpp)
 target_link_libraries(control_messages_test PRIVATE GTest::gtest_main drone_domain)
 gtest_discover_tests(control_messages_test)
+
+add_executable(observer_core_test tests/observer_core_test.cpp)
+target_link_libraries(observer_core_test PRIVATE GTest::gtest_main observer_core)
+gtest_discover_tests(observer_core_test)

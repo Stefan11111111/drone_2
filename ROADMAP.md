@@ -225,7 +225,7 @@ the note into generic documentation or paste large source listings.
 
 ### 21 — Implement observer core tracking ports
 
-- [ ] **AI prompt:** Complete roadmap step 21 only. Create `observer_core` with an input port for
+- [x] **AI prompt:** Complete roadmap step 21 only. Create `observer_core` with an input port for
   detections and an output port for target-track updates, plus the smallest use case that converts a
   detection into current track state. Use test doubles and add no DDS or simulation dependencies.
   Add `docs/learning/21-observer-ports.md`, explaining how ports let the same core feed DDS from a
