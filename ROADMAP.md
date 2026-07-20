@@ -195,7 +195,7 @@ the note into generic documentation or paste large source listings.
 
 ### 18 — Own participant lifetime and configuration
 
-- [ ] **AI prompt:** Complete roadmap step 18 only. Add the smallest RAII owner in
+- [x] **AI prompt:** Complete roadmap step 18 only. Add the smallest RAII owner in
   `drone_dds_transport` for a named `DomainParticipant`, configured by an explicit domain ID and with
   deterministic reverse-order cleanup. Keep it independent of participant-specific cores. Add
   `docs/learning/18-participant-lifetime.md`, explaining the DDS entity hierarchy and why child
