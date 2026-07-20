@@ -234,7 +234,7 @@ the note into generic documentation or paste large source listings.
 
 ### 22 — Produce a deterministic moving target
 
-- [ ] **AI prompt:** Complete roadmap step 22 only. Implement `simulated_radar_adapter` against the
+- [x] **AI prompt:** Complete roadmap step 22 only. Implement `simulated_radar_adapter` against the
   observer input port with a deterministic, time-stepped moving target. Keep scheduling and scenario
   parameters explicit so tests do not depend on wall-clock timing. Add
   `docs/learning/22-simulated-radar.md`, explaining why the simulator is an adapter and the target

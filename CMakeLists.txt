@@ -97,6 +97,10 @@ add_library(observer_core src/observer_core/target_tracker.cpp)
 target_include_directories(observer_core PUBLIC include)
 target_link_libraries(observer_core PUBLIC drone_domain)
 
+add_library(simulated_radar_adapter src/simulated_radar_adapter/simulated_radar.cpp)
+target_include_directories(simulated_radar_adapter PUBLIC include)
+target_link_libraries(simulated_radar_adapter PUBLIC observer_core)
+
 add_library(
   drone_dds_transport
   src/drone_dds_transport/assignment_mapping.cpp
@@ -189,3 +193,8 @@ gtest_discover_tests(control_messages_test)
 add_executable(observer_core_test tests/observer_core_test.cpp)
 target_link_libraries(observer_core_test PRIVATE GTest::gtest_main observer_core)
 gtest_discover_tests(observer_core_test)
+
+add_executable(simulated_radar_adapter_test tests/simulated_radar_adapter_test.cpp)
+target_link_libraries(
+  simulated_radar_adapter_test PRIVATE GTest::gtest_main simulated_radar_adapter)
+gtest_discover_tests(simulated_radar_adapter_test)
