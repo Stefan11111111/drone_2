@@ -214,7 +214,7 @@ the note into generic documentation or paste large source listings.
 
 ### 20 — Make discovery and matching observable
 
-- [ ] **AI prompt:** Complete roadmap step 20 only. Expose narrowly scoped match/discovery status
+- [x] **AI prompt:** Complete roadmap step 20 only. Expose narrowly scoped match/discovery status
   from the target endpoint support and test both matching and an intentionally incompatible setup
   without depending on timing guesses. Add `docs/learning/20-discovery-and-matching.md`, explaining
   participant discovery, endpoint discovery, and the topic/type/QoS conditions for a match.

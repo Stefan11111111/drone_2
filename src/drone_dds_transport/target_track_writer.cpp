@@ -28,6 +28,12 @@ namespace
 } // namespace
 
 TargetTrackWriter::TargetTrackWriter(eprosima::fastdds::dds::DomainParticipant &participant)
+    : TargetTrackWriter{participant, targetTrackWriterQos()}
+{
+}
+
+TargetTrackWriter::TargetTrackWriter(eprosima::fastdds::dds::DomainParticipant &participant,
+                                     const eprosima::fastdds::dds::DataWriterQos &writerQos)
     : participant_{participant}, topic_{participant}
 {
     publisher_ = participant_.create_publisher(eprosima::fastdds::dds::PUBLISHER_QOS_DEFAULT);
@@ -36,7 +42,7 @@ TargetTrackWriter::TargetTrackWriter(eprosima::fastdds::dds::DomainParticipant &
         throw std::runtime_error{"Fast DDS could not create the TargetTrack Publisher"};
     }
 
-    writer_ = publisher_->create_datawriter(&topic_.topic(), targetTrackWriterQos(), this);
+    writer_ = publisher_->create_datawriter(&topic_.topic(), writerQos, this);
     if (writer_ == nullptr)
     {
         static_cast<void>(participant_.delete_publisher(publisher_));
@@ -63,16 +69,44 @@ void TargetTrackWriter::on_publication_matched(
 {
     static_cast<void>(writer);
     {
-        const std::scoped_lock lock{matchMutex_};
-        matchedReaderCount_ = status.current_count;
+        const std::scoped_lock lock{discoveryMutex_};
+        discoveryStatus_.totalMatchCount = status.total_count;
+        discoveryStatus_.currentMatchCount = status.current_count;
     }
-    matchChanged_.notify_all();
+    discoveryChanged_.notify_all();
+}
+
+void TargetTrackWriter::on_offered_incompatible_qos(
+    eprosima::fastdds::dds::DataWriter *writer,
+    const eprosima::fastdds::dds::OfferedIncompatibleQosStatus &status)
+{
+    static_cast<void>(writer);
+    {
+        const std::scoped_lock lock{discoveryMutex_};
+        discoveryStatus_.incompatibleQosCount = status.total_count;
+        discoveryStatus_.lastIncompatibleQosPolicy = status.last_policy_id;
+    }
+    discoveryChanged_.notify_all();
+}
+
+TargetTrackDiscoveryStatus TargetTrackWriter::discoveryStatus() const
+{
+    const std::scoped_lock lock{discoveryMutex_};
+    return discoveryStatus_;
 }
 
 bool TargetTrackWriter::waitForReaderMatch(const std::chrono::milliseconds timeout)
 {
-    std::unique_lock lock{matchMutex_};
-    return matchChanged_.wait_for(lock, timeout, [this] { return matchedReaderCount_ > 0; });
+    std::unique_lock lock{discoveryMutex_};
+    return discoveryChanged_.wait_for(lock, timeout,
+                                      [this] { return discoveryStatus_.currentMatchCount > 0; });
+}
+
+bool TargetTrackWriter::waitForIncompatibleQos(const std::chrono::milliseconds timeout)
+{
+    std::unique_lock lock{discoveryMutex_};
+    return discoveryChanged_.wait_for(lock, timeout,
+                                      [this] { return discoveryStatus_.incompatibleQosCount > 0; });
 }
 
 void TargetTrackWriter::write(const domain::TargetTrack &track)
