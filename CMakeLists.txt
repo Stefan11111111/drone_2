@@ -115,6 +115,14 @@ add_library(
 target_include_directories(drone_dds_transport PUBLIC include)
 target_link_libraries(drone_dds_transport PUBLIC drone_dds_types drone_domain fastdds)
 
+add_library(observer_dds_adapter src/observer_dds_adapter/target_track_publisher.cpp)
+target_include_directories(observer_dds_adapter PUBLIC include)
+target_link_libraries(observer_dds_adapter PUBLIC observer_core drone_dds_transport)
+
+add_executable(observer src/observer_app/main.cpp)
+target_link_libraries(
+  observer PRIVATE observer_core observer_dds_adapter simulated_radar_adapter)
+
 add_executable(verification_workflow_test tests/verification_workflow_test.cpp)
 target_link_libraries(verification_workflow_test PRIVATE GTest::gtest_main)
 gtest_discover_tests(verification_workflow_test)
@@ -198,3 +206,11 @@ add_executable(simulated_radar_adapter_test tests/simulated_radar_adapter_test.c
 target_link_libraries(
   simulated_radar_adapter_test PRIVATE GTest::gtest_main simulated_radar_adapter)
 gtest_discover_tests(simulated_radar_adapter_test)
+
+add_executable(observer_publisher_process_test tests/observer_publisher_process_test.cpp)
+target_compile_definitions(
+  observer_publisher_process_test PRIVATE OBSERVER_EXECUTABLE_PATH="$<TARGET_FILE:observer>")
+target_link_libraries(
+  observer_publisher_process_test PRIVATE GTest::gtest_main drone_dds_transport)
+add_dependencies(observer_publisher_process_test observer)
+gtest_discover_tests(observer_publisher_process_test)
