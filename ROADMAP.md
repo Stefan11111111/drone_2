@@ -243,7 +243,7 @@ the note into generic documentation or paste large source listings.
 
 ### 23 — Publish observer tracks through DDS
 
-- [ ] **AI prompt:** Complete roadmap step 23 only. Implement `observer_dds_adapter` as the
+- [x] **AI prompt:** Complete roadmap step 23 only. Implement `observer_dds_adapter` as the
   observer-core output port using the target-track DataWriter support, then add a minimal observer
   composition executable that wires it to the simulated radar. Keep the executable limited to
   configuration, startup, and wiring. Add `docs/learning/23-observer-publisher.md`, explaining how an
