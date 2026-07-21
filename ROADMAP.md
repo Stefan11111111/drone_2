@@ -437,7 +437,7 @@ the note into generic documentation or paste large source listings.
 
 ### 44 — Prove the complete vision scenario
 
-- [ ] **AI prompt:** Complete roadmap step 44 only. Add one bounded end-to-end test that launches
+- [x] **AI prompt:** Complete roadmap step 44 only. Add one bounded end-to-end test that launches
   observer, console, and interceptor as separate processes; observes target and drone state;
   performs assignment and start actions; verifies pursuit; and ends when the correlated explosion
   appears on the console. Reuse existing test support rather than duplicating orchestration. Add

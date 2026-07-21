@@ -375,6 +375,17 @@ target_link_libraries(
 add_dependencies(moving_target_pursuit_process_test observer console interceptor)
 gtest_discover_tests(moving_target_pursuit_process_test PROPERTIES TIMEOUT 20)
 
+add_executable(end_to_end_interception_process_test tests/end_to_end_interception_process_test.cpp)
+target_compile_definitions(
+  end_to_end_interception_process_test
+  PRIVATE OBSERVER_EXECUTABLE_PATH="$<TARGET_FILE:observer>"
+          CONSOLE_EXECUTABLE_PATH="$<TARGET_FILE:console>"
+          INTERCEPTOR_EXECUTABLE_PATH="$<TARGET_FILE:interceptor>")
+target_link_libraries(
+  end_to_end_interception_process_test PRIVATE GTest::gtest_main process_test_support)
+add_dependencies(end_to_end_interception_process_test observer console interceptor)
+gtest_discover_tests(end_to_end_interception_process_test PROPERTIES TIMEOUT 45)
+
 add_executable(late_joiner_drone_state_process_test tests/late_joiner_drone_state_process_test.cpp)
 target_compile_definitions(
   late_joiner_drone_state_process_test
