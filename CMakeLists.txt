@@ -238,10 +238,23 @@ target_link_libraries(
   simulated_radar_adapter_test PRIVATE GTest::gtest_main simulated_radar_adapter)
 gtest_discover_tests(simulated_radar_adapter_test)
 
+add_library(process_test_support tests/process_test_support.cpp)
+target_include_directories(process_test_support PUBLIC tests)
+
 add_executable(observer_publisher_process_test tests/observer_publisher_process_test.cpp)
 target_compile_definitions(
   observer_publisher_process_test PRIVATE OBSERVER_EXECUTABLE_PATH="$<TARGET_FILE:observer>")
 target_link_libraries(
-  observer_publisher_process_test PRIVATE GTest::gtest_main drone_dds_transport)
+  observer_publisher_process_test PRIVATE GTest::gtest_main drone_dds_transport process_test_support)
 add_dependencies(observer_publisher_process_test observer)
 gtest_discover_tests(observer_publisher_process_test)
+
+add_executable(observer_console_process_test tests/observer_console_process_test.cpp)
+target_compile_definitions(
+  observer_console_process_test
+  PRIVATE OBSERVER_EXECUTABLE_PATH="$<TARGET_FILE:observer>"
+          CONSOLE_EXECUTABLE_PATH="$<TARGET_FILE:console>")
+target_link_libraries(
+  observer_console_process_test PRIVATE GTest::gtest_main process_test_support)
+add_dependencies(observer_console_process_test observer console)
+gtest_discover_tests(observer_console_process_test PROPERTIES TIMEOUT 15)

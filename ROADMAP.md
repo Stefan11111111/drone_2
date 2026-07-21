@@ -278,7 +278,7 @@ the note into generic documentation or paste large source listings.
 
 ### 27 — Verify the first separate-process flow
 
-- [ ] **AI prompt:** Complete roadmap step 27 only. Add a bounded automated integration scenario
+- [x] **AI prompt:** Complete roadmap step 27 only. Add a bounded automated integration scenario
   that starts observer and console as separate processes, waits for DDS discovery, and proves that
   at least two changing target positions reach the console. Capture actionable logs on failure and
   clean up child processes. Add `docs/learning/27-cross-process-targets.md`, explaining what changed

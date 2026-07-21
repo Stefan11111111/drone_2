@@ -74,6 +74,11 @@ void run(const std::uint32_t domainId)
     std::cout << "console: receiving target tracks in DDS domain " << domainId << '\n';
     view.render(projection);
 
+    while (!subscriber.waitForWriterMatch(receiveTimeout))
+    {
+    }
+    std::cout << "console: matched observer TargetTrack writer\n" << std::flush;
+
     while (true)
     {
         const auto received = subscriber.receiveNext(receiveTimeout);
