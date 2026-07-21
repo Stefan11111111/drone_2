@@ -62,3 +62,20 @@ foreach(term IN LISTS required_contract_terms)
     message(FATAL_ERROR "DDS topic catalog is missing required contract term '${term}'")
   endif()
 endforeach()
+
+set(
+  required_evidence_tests
+  "QosCatalogAudit.GivenFinalTopicCatalog_WhenEndpointQosIsBuilt_ThenEveryWriterAndReaderMatchesIt"
+  "TargetTrackPublishSubscribe.GivenTwoParticipants_WhenOneTrackIsWrittenAndTaken_ThenTheDomainValueRoundTrips"
+  "TargetTrackDiscovery.GivenBestEffortWriterAndReliableReader_WhenEndpointsAreDiscovered_ThenBothReportReliabilityIncompatibility"
+  "QosExperiments.GivenTransientLocalKeepLastHistory_WhenAReaderJoinsLate_ThenOnlyTheLatestSamplePerKeyArrives"
+  "QosExperiments.GivenVolatileAssignmentHistory_WhenAReaderJoinsLate_ThenOldIntentIsNotReplayedButNewIntentArrives"
+  "QosExperiments.GivenVolatileWriterAndTransientLocalReader_WhenDiscovered_ThenBothReportDurabilityIncompatibility"
+  "QosExperiments.GivenTargetWriterAtCatalogCapacity_WhenANewKeyIsWritten_ThenTheResourceErrorIsVisible")
+
+foreach(test_name IN LISTS required_evidence_tests)
+  string(FIND "${catalog_contents}" "${test_name}" test_name_position)
+  if(test_name_position EQUAL -1)
+    message(FATAL_ERROR "DDS topic catalog is missing QoS evidence test '${test_name}'")
+  endif()
+endforeach()

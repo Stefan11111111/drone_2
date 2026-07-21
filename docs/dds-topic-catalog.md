@@ -1,9 +1,9 @@
 # DDS topic catalog
 
 This catalog is the source of truth for the initial DDS topic names, wire-type names, keys, and
-non-default QoS choices. Later transport code must use these values without adding role-specific
-variants. All DataWriters and DataReaders for a row use the listed QoS unless a later documented
-experiment changes the row.
+final non-default QoS choices. Transport code must use these values without adding role-specific
+variants. Step 46 audited every DataWriter and DataReader factory against the rows below and retained
+the implemented policies because the executable evidence matches the scenario semantics.
 
 ## Initial topics
 
@@ -33,9 +33,9 @@ application-level duplicate detection.
 
 All initial flows are low-volume and affect the visible operational result, so readers request
 `RELIABLE` delivery. This asks Fast DDS to detect and retransmit missing samples; it does not mean
-the receiving application accepted a command or performed an effect. The target update rate may
-eventually justify `BEST_EFFORT`, but the reliable choice remains a hypothesis until the moving
-target experiment measures its behavior.
+the receiving application accepted a command or performed an effect. The end-to-end moving-target
+scenario completes within its bounded waits using this policy, and the matching experiment proves
+that weakening a writer to `BEST_EFFORT` would make it incompatible with the required readers.
 
 Target and drone snapshots use `TRANSIENT_LOCAL` so a late-matching reader can receive each living
 writer's latest state. Explosion events also use `TRANSIENT_LOCAL`, allowing a console that joins
@@ -49,35 +49,36 @@ enough for command or event keys, because each identity is immutable. The fixed 
 the demonstration's capacity explicit and keep history bounded. Reaching a cap must be reported as
 an operational error; transport code must not silently discard a new instance or manufacture a
 valid value. The limits of 64 targets, 16 drones/assignments, and 256 commands/events are initial
-scenario bounds to confirm under the later resource-limit experiments.
+scenario bounds. The capacity experiment confirms the target writer accepts 64 retained keys and
+reports the 65th; the endpoint audit confirms the corresponding configured bounds on every other
+writer and reader.
 
-All unlisted QoS policies keep the Fast DDS 3.3.0 defaults. In particular, this step proposes no
+All unlisted QoS policies keep the Fast DDS 3.3.0 defaults. In particular, the catalog uses no
 deadline, lifespan, ownership, transport priority, or middleware timestamp ordering. Domain
 timestamps and command/event identities remain responsible for stale and duplicate decisions in
 application code.
 
-## Matching and experiments
+## Executable evidence
 
 A writer and reader can exchange samples only after discovery finds compatible endpoints. They must
 agree on the Topic name and registered wire type, and the writer's offered Reliability and
-Durability must satisfy the reader's requested policies. Each endpoint will use the same row by
-default; later learning steps deliberately vary policies only to make matching behavior observable.
+Durability must satisfy the reader's requested policies. The following CTest-registered tests are
+the evidence for the final choices; each uses discovery or unread-data waits with explicit bounds.
 
-The hypotheses requiring evidence are:
+| Critical choice | Predicted and observed result | Passing test |
+| --- | --- | --- |
+| Every endpoint uses its catalog row | All ten writer/reader QoS objects have the listed Reliability, Durability, History, and resource limits | `QosCatalogAudit.GivenFinalTopicCatalog_WhenEndpointQosIsBuilt_ThenEveryWriterAndReaderMatchesIt` |
+| Reliable endpoints match and deliver | Matching catalog endpoints exchange a valid domain sample | `TargetTrackPublishSubscribe.GivenTwoParticipants_WhenOneTrackIsWrittenAndTaken_ThenTheDomainValueRoundTrips` |
+| A weaker Reliability offer is rejected | A `BEST_EFFORT` writer does not match a `RELIABLE` reader; both callbacks name Reliability | `TargetTrackDiscovery.GivenBestEffortWriterAndReliableReader_WhenEndpointsAreDiscovered_ThenBothReportReliabilityIncompatibility` |
+| Retained state is latest per key | A late reader gets the newest sample for each key and not the superseded sample | `QosExperiments.GivenTransientLocalKeepLastHistory_WhenAReaderJoinsLate_ThenOnlyTheLatestSamplePerKeyArrives` |
+| Old operator intent is not replayed | A late volatile reader gets no pre-match assignment but receives a post-match assignment | `QosExperiments.GivenVolatileAssignmentHistory_WhenAReaderJoinsLate_ThenOldIntentIsNotReplayedButNewIntentArrives` |
+| A weaker Durability offer is rejected | A `VOLATILE` writer does not match a `TRANSIENT_LOCAL` reader; both callbacks name Durability | `QosExperiments.GivenVolatileWriterAndTransientLocalReader_WhenDiscovered_ThenBothReportDurabilityIncompatibility` |
+| Capacity failures remain visible | 64 retained target keys succeed and the 65th write reports a Fast DDS resource error | `QosExperiments.GivenTargetWriterAtCatalogCapacity_WhenANewKeyIsWritten_ThenTheResourceErrorIsVisible` |
 
-- step 20: compatible and intentionally incompatible endpoint matching;
-- step 27: reliable, retained target updates across the first process boundary;
-- step 32: drone-state behavior when the interceptor or console starts first;
-- step 43: visibility of a retained outcome to a restarting console while the writer lives; and
-- step 46: Reliability, Durability, History, incompatible-QoS, and resource-limit behavior before
-  these policies are considered final.
-
-Step 32 now provides executable evidence for the drone-state hypothesis. The
-`LateJoinerDroneState` process tests observe the available sample both when the console reader
-exists before the interceptor starts and when the interceptor writes before the console process is
-launched. In the latter case the writer remains alive, and its `TRANSIENT_LOCAL / KEEP_LAST(1)`
-history supplies the retained state after discovery. This confirms the proposed policy for these
-two start orders; process-restart persistence and final QoS auditing remain steps 45 and 46 work.
+Scenario-specific tests reinforce the generic experiments. The `LateJoinerDroneState` process tests
+cover both console/interceptor start orders, while
+`ExplosionEventDdsAdapter.GivenOneSuccessfulInterception_WhenALateReaderMatches_ThenExactlyOneCorrelatedEventArrives`
+shows a retained outcome reaching a late console-side reader while its writer remains alive.
 
 The policy semantics and consistency rules are documented in the Fast DDS 3.3.0
 [standard QoS policies](https://fast-dds.docs.eprosima.com/en/v3.3.0/fastdds/dds_layer/core/policy/standardQosPolicies.html).
