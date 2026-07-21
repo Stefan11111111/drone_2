@@ -4,6 +4,8 @@
 #include "drone/domain/drone_id.h"
 #include "drone/domain/drone_state.h"
 #include "drone/domain/position.h"
+#include "drone/domain/target_id.h"
+#include "drone/domain/target_track.h"
 #include "drone/domain/timestamp.h"
 #include "drone/interceptor_core/drone_state_output_port.h"
 #include "drone/interceptor_core/flight_control_port.h"
@@ -25,6 +27,7 @@ using drone::domain::DroneState;
 using drone::domain::DroneStatus;
 using drone::domain::Position;
 using drone::domain::TargetId;
+using drone::domain::TargetTrack;
 using drone::domain::Timestamp;
 using drone::interceptor::AssignmentHandlingResult;
 using drone::interceptor::DroneStateOutputPort;
@@ -32,6 +35,7 @@ using drone::interceptor::FlightControlPort;
 using drone::interceptor::InterceptorStateMachine;
 using drone::interceptor::PositioningPort;
 using drone::interceptor::PositionSample;
+using drone::interceptor::TargetTrackHandlingResult;
 using namespace std::chrono_literals;
 
 class FixedPositioning final : public PositioningPort
@@ -169,6 +173,39 @@ TEST(InterceptorCore,
               AssignmentHandlingResult::conflicting);
     EXPECT_EQ(interceptor.state()->assignedTargetId(), TargetId{42});
     EXPECT_EQ(output.publishedStates.size(), 2U);
+}
+
+TEST(InterceptorCore,
+     GivenUnrelatedAndStaleTargetTracks_WhenHandled_ThenOnlyNewestAssignedTrackIsStored)
+{
+    FixedPositioning positioning;
+    CapturingFlightControl flightControl;
+    CapturingStateOutput output;
+    InterceptorStateMachine interceptor{DroneId{7}, positioning, flightControl, output};
+    interceptor.start();
+    ASSERT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{42}}),
+              AssignmentHandlingResult::applied);
+
+    EXPECT_EQ(interceptor.onTargetTrack(
+                  TargetTrack{TargetId{43}, Position{9.0, 9.0, 9.0}, Timestamp{3'000ms}}),
+              TargetTrackHandlingResult::unrelated);
+    EXPECT_FALSE(interceptor.latestTargetTrack().has_value());
+
+    const TargetTrack current{TargetId{42}, Position{10.0, 20.0, 30.0}, Timestamp{3'000ms}};
+    EXPECT_EQ(interceptor.onTargetTrack(current), TargetTrackHandlingResult::accepted);
+    EXPECT_EQ(interceptor.onTargetTrack(current), TargetTrackHandlingResult::duplicate);
+    EXPECT_EQ(interceptor.onTargetTrack(
+                  TargetTrack{TargetId{42}, Position{1.0, 2.0, 3.0}, Timestamp{2'000ms}}),
+              TargetTrackHandlingResult::stale);
+    EXPECT_EQ(interceptor.onTargetTrack(
+                  TargetTrack{TargetId{42}, Position{4.0, 5.0, 6.0}, Timestamp{3'000ms}}),
+              TargetTrackHandlingResult::conflicting);
+    EXPECT_EQ(interceptor.latestTargetTrack(), current);
+
+    const TargetTrack newer{TargetId{42}, Position{11.0, 22.0, 33.0}, Timestamp{4'000ms}};
+    EXPECT_EQ(interceptor.onTargetTrack(newer), TargetTrackHandlingResult::updated);
+    EXPECT_EQ(interceptor.latestTargetTrack(), newer);
+    EXPECT_TRUE(flightControl.destinations.empty());
 }
 
 } // namespace

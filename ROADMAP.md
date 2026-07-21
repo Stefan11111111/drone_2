@@ -379,7 +379,7 @@ the note into generic documentation or paste large source listings.
 
 ### 38 — Subscribe the interceptor to target updates
 
-- [ ] **AI prompt:** Complete roadmap step 38 only. Add the target-track DataReader to the interceptor
+- [x] **AI prompt:** Complete roadmap step 38 only. Add the target-track DataReader to the interceptor
   DDS adapter and an interceptor-core input that stores only the newest update for its assigned
   target. Ignore unrelated and stale tracks with tests; do not move the vehicle yet. Add
   `docs/learning/38-interceptor-target-reader.md`, explaining content selection in application code

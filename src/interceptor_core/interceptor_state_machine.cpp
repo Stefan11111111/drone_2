@@ -2,6 +2,7 @@
 
 #include "drone/domain/assignment.h"
 #include "drone/domain/drone_state.h"
+#include "drone/domain/target_track.h"
 
 #include <optional>
 #include <stdexcept>
@@ -55,9 +56,44 @@ AssignmentHandlingResult InterceptorStateMachine::onAssignment(const domain::Ass
     return AssignmentHandlingResult::applied;
 }
 
+TargetTrackHandlingResult InterceptorStateMachine::onTargetTrack(const domain::TargetTrack &track)
+{
+    if (!state_.has_value() || !state_->assignedTargetId().has_value() ||
+        track.targetId() != *state_->assignedTargetId())
+    {
+        return TargetTrackHandlingResult::unrelated;
+    }
+    if (!latestTargetTrack_.has_value())
+    {
+        latestTargetTrack_ = track;
+        return TargetTrackHandlingResult::accepted;
+    }
+    if (track == *latestTargetTrack_)
+    {
+        return TargetTrackHandlingResult::duplicate;
+    }
+    if (track.measuredAt() < latestTargetTrack_->measuredAt())
+    {
+        return TargetTrackHandlingResult::stale;
+    }
+    if (track.measuredAt() == latestTargetTrack_->measuredAt())
+    {
+        return TargetTrackHandlingResult::conflicting;
+    }
+
+    latestTargetTrack_ = track;
+    return TargetTrackHandlingResult::updated;
+}
+
 const std::optional<domain::DroneState> &InterceptorStateMachine::state() const noexcept
 {
     return state_;
+}
+
+const std::optional<domain::TargetTrack> &
+InterceptorStateMachine::latestTargetTrack() const noexcept
+{
+    return latestTargetTrack_;
 }
 
 } // namespace drone::interceptor

@@ -156,7 +156,8 @@ add_library(
   interceptor_dds_adapter
   src/interceptor_dds_adapter/assignment_subscriber.cpp
   src/interceptor_dds_adapter/drone_state_publisher.cpp
-  src/interceptor_dds_adapter/interception_command_subscriber.cpp)
+  src/interceptor_dds_adapter/interception_command_subscriber.cpp
+  src/interceptor_dds_adapter/target_track_subscriber.cpp)
 target_include_directories(interceptor_dds_adapter PUBLIC include)
 target_link_libraries(interceptor_dds_adapter PUBLIC interceptor_core drone_dds_transport)
 
@@ -290,6 +291,12 @@ target_link_libraries(
   interception_command_dds_adapter_test
   PRIVATE GTest::gtest_main console_dds_adapter interceptor_dds_adapter)
 gtest_discover_tests(interception_command_dds_adapter_test)
+
+add_executable(interceptor_target_dds_adapter_test tests/interceptor_target_dds_adapter_test.cpp)
+target_link_libraries(
+  interceptor_target_dds_adapter_test
+  PRIVATE GTest::gtest_main interceptor_dds_adapter drone_dds_transport)
+gtest_discover_tests(interceptor_target_dds_adapter_test)
 
 add_executable(simulated_radar_adapter_test tests/simulated_radar_adapter_test.cpp)
 target_link_libraries(
