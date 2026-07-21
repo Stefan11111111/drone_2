@@ -2,6 +2,7 @@
 
 #include <fastdds/dds/domain/DomainParticipant.hpp>
 #include <fastdds/dds/domain/DomainParticipantFactory.hpp>
+#include <fastdds/dds/publisher/qos/PublisherQos.hpp>
 
 #include <stdexcept>
 #include <string>
@@ -17,6 +18,7 @@ using eprosima::fastdds::dds::DomainId_t;
 using eprosima::fastdds::dds::DomainParticipantFactory;
 
 constexpr DomainId_t successfulDomainId{180};
+constexpr DomainId_t partialStartupDomainId{181};
 constexpr DomainId_t invalidDefaultPortDomainId{233};
 
 static_assert(!std::is_copy_constructible_v<DomainParticipantOwner>);
@@ -65,6 +67,23 @@ TEST(DomainParticipantOwner, GivenEmptyOrOversizedName_WhenConstructed_ThenItIsR
                  std::invalid_argument);
 
     EXPECT_TRUE(factory->lookup_participants(successfulDomainId).empty());
+}
+
+TEST(DomainParticipantOwner,
+     GivenAContainedEntityFromPartialStartup_WhenOwnerLeavesScope_ThenFallbackCleanupRemovesIt)
+{
+    auto *const factory = DomainParticipantFactory::get_instance();
+    ASSERT_NE(factory, nullptr);
+    ASSERT_TRUE(factory->lookup_participants(partialStartupDomainId).empty());
+
+    {
+        DomainParticipantOwner owner{partialStartupDomainId, "drone_partial_startup"};
+        ASSERT_NE(
+            owner.participant().create_publisher(eprosima::fastdds::dds::PUBLISHER_QOS_DEFAULT),
+            nullptr);
+    }
+
+    EXPECT_TRUE(factory->lookup_participants(partialStartupDomainId).empty());
 }
 
 } // namespace

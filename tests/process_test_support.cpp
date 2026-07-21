@@ -288,7 +288,7 @@ bool ChildProcess::terminateAndWait(const std::chrono::milliseconds timeout) noe
         return true;
     }
 
-    if (::kill(processId_, SIGTERM) != 0 && errno != ESRCH)
+    if (!sendSignal(SIGTERM))
     {
         return false;
     }
@@ -299,6 +299,20 @@ bool ChildProcess::terminateAndWait(const std::chrono::milliseconds timeout) noe
 
     static_cast<void>(::kill(processId_, SIGKILL));
     return waitForExitBlocking();
+}
+
+bool ChildProcess::sendSignal(const int signal) const noexcept
+{
+    if (processId_ <= 0)
+    {
+        return false;
+    }
+    return ::kill(processId_, signal) == 0 || errno == ESRCH;
+}
+
+std::optional<int> ChildProcess::exitCode() const noexcept
+{
+    return exitCode_;
 }
 
 const std::string &ChildProcess::capturedOutput() noexcept
@@ -364,6 +378,7 @@ bool ChildProcess::waitForExit(const std::chrono::milliseconds timeout) noexcept
         if (result == processId_)
         {
             processId_ = -1;
+            recordExitStatus(status);
             drainOutput();
             return true;
         }
@@ -388,8 +403,22 @@ bool ChildProcess::waitForExitBlocking() noexcept
     } while (result < 0 && errno == EINTR);
 
     processId_ = -1;
+    if (result > 0)
+    {
+        recordExitStatus(status);
+    }
     drainOutput();
     return result > 0 || (result < 0 && errno == ECHILD);
+}
+
+void ChildProcess::recordExitStatus(const int status) noexcept
+{
+    if (WIFEXITED(status))
+    {
+        exitCode_ = WEXITSTATUS(status);
+        return;
+    }
+    exitCode_.reset();
 }
 
 } // namespace drone::test

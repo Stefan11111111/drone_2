@@ -7,14 +7,17 @@ flowchart TD
     observer_app[observer executable] --> observer_core
     observer_app --> observer_dds_adapter
     observer_app --> simulated_radar_adapter
+    observer_app --> application_support
 
     console_app[console executable] --> console_core
     console_app --> console_dds_adapter
     console_app --> console_ui_adapter
+    console_app --> application_support
 
     interceptor_app[interceptor executable] --> interceptor_core
     interceptor_app --> interceptor_dds_adapter
     interceptor_app --> simulated_vehicle_adapter
+    interceptor_app --> application_support
 
     simulated_radar_adapter --> observer_core
     observer_dds_adapter --> observer_core
@@ -54,6 +57,7 @@ The executable nodes are composition roots, not libraries. They shall contain on
 | `interceptor_core` | Owns the interceptor state machine, follows the latest assigned target position, requests movement through flight-control ports, reports drone state, and requests the interception effect after reaching the target. | `drone_domain` |
 | `interceptor_dds_adapter` | Receives assignments, commands, and target updates from DDS and publishes drone state and interception outcomes. | `interceptor_core`, `drone_dds_transport` |
 | `simulated_vehicle_adapter` | Simulates positioning, flight control, and the explosion effect through ports owned by `interceptor_core`. | `interceptor_core` |
+| `application_support` | Validates composition-root process configuration and turns operating-system shutdown signals into cooperative loop termination. It contains no application, DDS, UI, or simulation behavior. | None |
 
 All listed dependencies are compile-time dependencies. A library shall also link directly to every target whose public API it uses; it shall not rely on accidental transitive linkage.
 

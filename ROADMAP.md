@@ -449,7 +449,7 @@ the note into generic documentation or paste large source listings.
 
 ### 45 — Make process lifecycle and configuration explicit
 
-- [ ] **AI prompt:** Complete roadmap step 45 only. Give all three executables consistent validated
+- [x] **AI prompt:** Complete roadmap step 45 only. Give all three executables consistent validated
   configuration for domain ID, participant identity, simulation tick/rate inputs, and graceful
   shutdown. Ensure DDS entities are destroyed safely even after partial startup failure. Add
   `docs/learning/45-configuration-and-shutdown.md`, explaining DDS domain isolation, participant

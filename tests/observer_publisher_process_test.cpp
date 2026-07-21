@@ -93,8 +93,9 @@ verifySuccessiveMovingTracks(const std::vector<TargetTrack> &receivedTracks)
 TEST(ObserverPublisher,
      GivenASeparateObserverProcess_WhenItsWriterMatches_ThenMultipleMovingTracksAreReceived)
 {
-    ChildProcess observer{OBSERVER_EXECUTABLE_PATH,
-                          {std::to_string(observerProcessDomainId), "100"}};
+    ChildProcess observer{
+        OBSERVER_EXECUTABLE_PATH,
+        {"--domain-id", std::to_string(observerProcessDomainId), "--tick-count", "100"}};
     DomainParticipantOwner probeParticipant{observerProcessDomainId, "drone_step_23_probe"};
     TargetTrackReader reader{probeParticipant.participant()};
 

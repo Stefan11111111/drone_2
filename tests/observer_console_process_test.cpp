@@ -82,8 +82,10 @@ TEST(
     GivenSeparateObserverAndConsoleProcesses_WhenDdsEndpointsMatch_ThenChangingPositionsReachTheConsole)
 {
     const auto domainId = std::to_string(processScenarioDomainId);
-    ChildProcess console{CONSOLE_EXECUTABLE_PATH, {domainId}, ChildOutput::capture};
-    ChildProcess observer{OBSERVER_EXECUTABLE_PATH, {domainId, "100"}, ChildOutput::capture};
+    ChildProcess console{CONSOLE_EXECUTABLE_PATH, {"--domain-id", domainId}, ChildOutput::capture};
+    ChildProcess observer{OBSERVER_EXECUTABLE_PATH,
+                          {"--domain-id", domainId, "--tick-count", "100"},
+                          ChildOutput::capture};
 
     ASSERT_TRUE(console.waitForOutput(discoveryLog, discoveryTimeout))
         << "The console did not report a matched observer within " << discoveryTimeout.count()

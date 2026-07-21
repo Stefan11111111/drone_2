@@ -124,8 +124,9 @@ TEST(InterceptorPublisher,
 {
     DomainParticipantOwner readerParticipant{processDomainId, "drone_step_30_probe"};
     WireDroneStateReader reader{readerParticipant.participant()};
-    ChildProcess interceptor{
-        INTERCEPTOR_EXECUTABLE_PATH, {std::to_string(processDomainId)}, ChildOutput::capture};
+    ChildProcess interceptor{INTERCEPTOR_EXECUTABLE_PATH,
+                             {"--domain-id", std::to_string(processDomainId)},
+                             ChildOutput::capture};
 
     const auto received = reader.receive(dataTimeout);
 

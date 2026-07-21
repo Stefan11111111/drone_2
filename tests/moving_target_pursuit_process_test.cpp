@@ -147,15 +147,18 @@ TEST(MovingTargetPursuit,
 {
     const auto domainId = std::to_string(pursuitDomainId);
     ChildProcess console{
-        CONSOLE_EXECUTABLE_PATH, {domainId, "--auto-pursuit"}, ChildOutput::capture};
+        CONSOLE_EXECUTABLE_PATH, {"--domain-id", domainId, "--auto-pursuit"}, ChildOutput::capture};
     ASSERT_TRUE(console.waitForOutput(consoleReadyLog, readinessTimeout))
         << "The console did not become ready.\nConsole log:\n"
         << console.capturedOutput();
-    ChildProcess interceptor{INTERCEPTOR_EXECUTABLE_PATH, {domainId}, ChildOutput::capture};
+    ChildProcess interceptor{
+        INTERCEPTOR_EXECUTABLE_PATH, {"--domain-id", domainId}, ChildOutput::capture};
     ASSERT_TRUE(interceptor.waitForOutput(interceptorReadyLog, readinessTimeout))
         << "The interceptor did not become ready.\nInterceptor log:\n"
         << interceptor.capturedOutput();
-    ChildProcess observer{OBSERVER_EXECUTABLE_PATH, {domainId, "100"}, ChildOutput::capture};
+    ChildProcess observer{OBSERVER_EXECUTABLE_PATH,
+                          {"--domain-id", domainId, "--tick-count", "100"},
+                          ChildOutput::capture};
 
     ASSERT_TRUE(console.waitForOutput(assignmentLog, actionTimeout))
         << "The automated console did not publish an assignment.\nConsole log:\n"

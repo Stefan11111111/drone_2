@@ -157,13 +157,13 @@ ctest --preset development -R '^TerminalView\.' -V
 For a live view, start the console in one terminal:
 
 ```bash
-./build/development/console 0
+./build/development/console --domain-id 0
 ```
 
 Then publish a finite moving-target scenario in another terminal:
 
 ```bash
-./build/development/observer 0 20
+./build/development/observer --domain-id 0 --tick-count 20
 ```
 
 The first process prints an empty snapshot and then successive snapshots for target 1. Both
