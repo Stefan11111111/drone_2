@@ -1,5 +1,6 @@
 #include "drone/interceptor_core/interceptor_state_machine.h"
 
+#include "drone/domain/assignment.h"
 #include "drone/domain/drone_state.h"
 
 #include <optional>
@@ -28,6 +29,30 @@ void InterceptorStateMachine::start()
     state_.emplace(droneId_, position.position, position.measuredAt, domain::DroneStatus::available,
                    std::nullopt);
     stateOutput_.publish(*state_);
+}
+
+AssignmentHandlingResult InterceptorStateMachine::onAssignment(const domain::Assignment &assignment)
+{
+    if (assignment.droneId() != droneId_)
+    {
+        return AssignmentHandlingResult::wrongDrone;
+    }
+    if (!state_.has_value())
+    {
+        return AssignmentHandlingResult::notStarted;
+    }
+    if (state_->assignedTargetId().has_value())
+    {
+        return *state_->assignedTargetId() == assignment.targetId()
+                   ? AssignmentHandlingResult::duplicate
+                   : AssignmentHandlingResult::conflicting;
+    }
+
+    const auto position = positioning_.currentPosition();
+    state_.emplace(droneId_, position.position, position.measuredAt, domain::DroneStatus::assigned,
+                   assignment.targetId());
+    stateOutput_.publish(*state_);
+    return AssignmentHandlingResult::applied;
 }
 
 const std::optional<domain::DroneState> &InterceptorStateMachine::state() const noexcept

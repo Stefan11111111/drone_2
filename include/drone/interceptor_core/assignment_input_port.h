@@ -3,15 +3,27 @@
 
 #include "drone/domain/assignment.h"
 
+#include <cstdint>
+
 namespace drone::interceptor
 {
+
+enum class AssignmentHandlingResult : std::uint8_t
+{
+    applied,
+    wrongDrone,
+    duplicate,
+    conflicting,
+    notStarted,
+};
 
 class AssignmentInputPort
 {
   public:
     virtual ~AssignmentInputPort() = default;
 
-    virtual void onAssignment(const domain::Assignment &assignment) = 0;
+    [[nodiscard]] virtual AssignmentHandlingResult
+    onAssignment(const domain::Assignment &assignment) = 0;
 };
 
 } // namespace drone::interceptor

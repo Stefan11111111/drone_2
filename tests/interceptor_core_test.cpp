@@ -1,5 +1,6 @@
 #include "drone/interceptor_core/interceptor_state_machine.h"
 
+#include "drone/domain/assignment.h"
 #include "drone/domain/drone_id.h"
 #include "drone/domain/drone_state.h"
 #include "drone/domain/position.h"
@@ -18,11 +19,14 @@
 namespace
 {
 
+using drone::domain::Assignment;
 using drone::domain::DroneId;
 using drone::domain::DroneState;
 using drone::domain::DroneStatus;
 using drone::domain::Position;
+using drone::domain::TargetId;
 using drone::domain::Timestamp;
+using drone::interceptor::AssignmentHandlingResult;
 using drone::interceptor::DroneStateOutputPort;
 using drone::interceptor::FlightControlPort;
 using drone::interceptor::InterceptorStateMachine;
@@ -96,6 +100,75 @@ TEST(InterceptorCore,
 
     EXPECT_EQ(output.publishedStates.size(), 1U);
     EXPECT_TRUE(flightControl.destinations.empty());
+}
+
+TEST(InterceptorCore, GivenAnAssignmentForAnotherDrone_WhenHandled_ThenStateDoesNotChange)
+{
+    FixedPositioning positioning;
+    CapturingFlightControl flightControl;
+    CapturingStateOutput output;
+    InterceptorStateMachine interceptor{DroneId{7}, positioning, flightControl, output};
+    interceptor.start();
+
+    EXPECT_EQ(interceptor.onAssignment(Assignment{DroneId{8}, TargetId{42}}),
+              AssignmentHandlingResult::wrongDrone);
+    EXPECT_EQ(interceptor.state()->status(), DroneStatus::available);
+    EXPECT_EQ(output.publishedStates.size(), 1U);
+}
+
+TEST(InterceptorCore,
+     GivenAValidAssignment_WhenHandled_ThenTargetIsRememberedAndAssignedStateIsPublished)
+{
+    FixedPositioning positioning;
+    CapturingFlightControl flightControl;
+    CapturingStateOutput output;
+    InterceptorStateMachine interceptor{DroneId{7}, positioning, flightControl, output};
+    interceptor.start();
+    positioning.sample = {.position = Position{13.0, -4.0, 121.0},
+                          .measuredAt = Timestamp{2'100ms}};
+
+    EXPECT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{42}}),
+              AssignmentHandlingResult::applied);
+
+    const DroneState expected{DroneId{7}, positioning.sample.position,
+                              positioning.sample.measuredAt, DroneStatus::assigned, TargetId{42}};
+    EXPECT_EQ(interceptor.state(), std::optional{expected});
+    ASSERT_EQ(output.publishedStates.size(), 2U);
+    EXPECT_EQ(output.publishedStates.back(), expected);
+    EXPECT_TRUE(flightControl.destinations.empty());
+}
+
+TEST(InterceptorCore, GivenTheCurrentAssignmentAgain_WhenHandled_ThenItIsIgnoredAsDuplicate)
+{
+    FixedPositioning positioning;
+    CapturingFlightControl flightControl;
+    CapturingStateOutput output;
+    InterceptorStateMachine interceptor{DroneId{7}, positioning, flightControl, output};
+    interceptor.start();
+    ASSERT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{42}}),
+              AssignmentHandlingResult::applied);
+
+    EXPECT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{42}}),
+              AssignmentHandlingResult::duplicate);
+    EXPECT_EQ(interceptor.state()->assignedTargetId(), TargetId{42});
+    EXPECT_EQ(output.publishedStates.size(), 2U);
+}
+
+TEST(InterceptorCore,
+     GivenAnExistingAssignment_WhenAnotherTargetIsAssigned_ThenItIsIgnoredAsConflicting)
+{
+    FixedPositioning positioning;
+    CapturingFlightControl flightControl;
+    CapturingStateOutput output;
+    InterceptorStateMachine interceptor{DroneId{7}, positioning, flightControl, output};
+    interceptor.start();
+    ASSERT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{42}}),
+              AssignmentHandlingResult::applied);
+
+    EXPECT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{43}}),
+              AssignmentHandlingResult::conflicting);
+    EXPECT_EQ(interceptor.state()->assignedTargetId(), TargetId{42});
+    EXPECT_EQ(output.publishedStates.size(), 2U);
 }
 
 } // namespace

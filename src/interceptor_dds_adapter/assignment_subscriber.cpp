@@ -42,7 +42,7 @@ AssignmentReceiveResult AssignmentSubscriber::receiveNext(const std::chrono::mil
         return std::unexpected{AssignmentReceiveIssue::discardedInvalidData};
     }
 
-    input_.onAssignment(**sample);
+    static_cast<void>(input_.onAssignment(**sample));
     return {};
 }
 

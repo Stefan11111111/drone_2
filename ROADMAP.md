@@ -353,7 +353,7 @@ the note into generic documentation or paste large source listings.
 
 ### 35 — Apply assignment in interceptor core
 
-- [ ] **AI prompt:** Complete roadmap step 35 only. Teach interceptor core to validate an assignment
+- [x] **AI prompt:** Complete roadmap step 35 only. Teach interceptor core to validate an assignment
   addressed to itself, remember the target identifier, transition to assigned state, and publish the
   new drone state. Cover wrong-drone, duplicate, conflicting, and valid assignments with unit tests.
   Add `docs/learning/35-interceptor-assignment.md`, explaining idempotence and why distributed

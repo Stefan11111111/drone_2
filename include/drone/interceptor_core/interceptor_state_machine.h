@@ -3,6 +3,7 @@
 
 #include "drone/domain/drone_id.h"
 #include "drone/domain/drone_state.h"
+#include "drone/interceptor_core/assignment_input_port.h"
 #include "drone/interceptor_core/drone_state_output_port.h"
 #include "drone/interceptor_core/flight_control_port.h"
 #include "drone/interceptor_core/positioning_port.h"
@@ -12,13 +13,15 @@
 namespace drone::interceptor
 {
 
-class InterceptorStateMachine final
+class InterceptorStateMachine final : public AssignmentInputPort
 {
   public:
     InterceptorStateMachine(domain::DroneId droneId, PositioningPort &positioning,
                             FlightControlPort &flightControl, DroneStateOutputPort &stateOutput);
 
     void start();
+    [[nodiscard]] AssignmentHandlingResult
+    onAssignment(const domain::Assignment &assignment) override;
 
     [[nodiscard]] const std::optional<domain::DroneState> &state() const noexcept;
 
