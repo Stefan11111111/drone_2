@@ -186,6 +186,12 @@ target_link_libraries(verification_workflow_test PRIVATE GTest::gtest_main)
 gtest_discover_tests(verification_workflow_test)
 
 add_test(
+  NAME VerificationWorkflow.ClangTidyChangedFiles
+  COMMAND
+    bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/run_clang_tidy_script_test.sh
+    ${CMAKE_CURRENT_SOURCE_DIR}/scripts/run-clang-tidy.sh)
+
+add_test(
   NAME VerificationWorkflow.TopicCatalog
   COMMAND
     ${CMAKE_COMMAND}
