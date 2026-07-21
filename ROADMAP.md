@@ -325,7 +325,7 @@ the note into generic documentation or paste large source listings.
 
 ### 32 — Verify late discovery of an available interceptor
 
-- [ ] **AI prompt:** Complete roadmap step 32 only. Extend the process-level integration scenario to
+- [x] **AI prompt:** Complete roadmap step 32 only. Extend the process-level integration scenario to
   start the interceptor and console in both orders and verify the documented drone-state QoS
   behavior. Change QoS only if the experiment disproves step 10's hypothesis, and update the catalog
   with evidence. Add `docs/learning/32-late-joiner-state.md`, explaining durability, history, and

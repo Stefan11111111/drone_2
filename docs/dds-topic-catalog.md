@@ -72,6 +72,13 @@ The hypotheses requiring evidence are:
 - step 46: Reliability, Durability, History, incompatible-QoS, and resource-limit behavior before
   these policies are considered final.
 
+Step 32 now provides executable evidence for the drone-state hypothesis. The
+`LateJoinerDroneState` process tests observe the available sample both when the console reader
+exists before the interceptor starts and when the interceptor writes before the console process is
+launched. In the latter case the writer remains alive, and its `TRANSIENT_LOCAL / KEEP_LAST(1)`
+history supplies the retained state after discovery. This confirms the proposed policy for these
+two start orders; process-restart persistence and final QoS auditing remain steps 45 and 46 work.
+
 The policy semantics and consistency rules are documented in the Fast DDS 3.3.0
 [standard QoS policies](https://fast-dds.docs.eprosima.com/en/v3.3.0/fastdds/dds_layer/core/policy/standardQosPolicies.html).
 Fast DDS also explains how keys divide a Topic into
