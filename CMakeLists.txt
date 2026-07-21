@@ -137,6 +137,8 @@ add_library(
   src/drone_dds_transport/drone_state_topic.cpp
   src/drone_dds_transport/drone_state_writer.cpp
   src/drone_dds_transport/explosion_event_mapping.cpp
+  src/drone_dds_transport/explosion_event_topic.cpp
+  src/drone_dds_transport/explosion_event_writer.cpp
   src/drone_dds_transport/interception_command_mapping.cpp
   src/drone_dds_transport/interception_command_reader.cpp
   src/drone_dds_transport/interception_command_topic.cpp
@@ -156,6 +158,7 @@ add_library(
   interceptor_dds_adapter
   src/interceptor_dds_adapter/assignment_subscriber.cpp
   src/interceptor_dds_adapter/drone_state_publisher.cpp
+  src/interceptor_dds_adapter/explosion_event_publisher.cpp
   src/interceptor_dds_adapter/interception_command_subscriber.cpp
   src/interceptor_dds_adapter/target_track_subscriber.cpp)
 target_include_directories(interceptor_dds_adapter PUBLIC include)
@@ -303,6 +306,12 @@ target_link_libraries(
   interceptor_target_dds_adapter_test
   PRIVATE GTest::gtest_main interceptor_dds_adapter drone_dds_transport)
 gtest_discover_tests(interceptor_target_dds_adapter_test)
+
+add_executable(explosion_event_dds_adapter_test tests/explosion_event_dds_adapter_test.cpp)
+target_link_libraries(
+  explosion_event_dds_adapter_test
+  PRIVATE GTest::gtest_main interceptor_dds_adapter drone_dds_transport)
+gtest_discover_tests(explosion_event_dds_adapter_test)
 
 add_executable(simulated_radar_adapter_test tests/simulated_radar_adapter_test.cpp)
 target_link_libraries(

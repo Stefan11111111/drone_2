@@ -2,6 +2,8 @@
 
 #include "drone/domain/assignment.h"
 #include "drone/domain/drone_state.h"
+#include "drone/domain/explosion_event.h"
+#include "drone/domain/explosion_event_id.h"
 #include "drone/domain/interception_command.h"
 #include "drone/domain/target_track.h"
 
@@ -16,9 +18,10 @@ InterceptorStateMachine::InterceptorStateMachine(const InterceptorConfiguration 
                                                  PositioningPort &positioning,
                                                  FlightControlPort &flightControl,
                                                  InterceptionEffectPort &effect,
-                                                 DroneStateOutputPort &stateOutput)
+                                                 DroneStateOutputPort &stateOutput,
+                                                 ExplosionEventOutputPort &eventOutput)
     : droneId_{configuration.droneId}, positioning_{positioning}, flightControl_{flightControl},
-      effect_{effect}, stateOutput_{stateOutput},
+      effect_{effect}, stateOutput_{stateOutput}, eventOutput_{eventOutput},
       arrivalToleranceMeters_{configuration.arrivalToleranceMeters}
 {
     if (!std::isfinite(arrivalToleranceMeters_) || arrivalToleranceMeters_ < 0.0)
@@ -124,6 +127,7 @@ InterceptorStateMachine::startInterception(const domain::InterceptionCommand &co
                    domain::DroneStatus::intercepting, command.targetId());
     stateOutput_.publish(*state_);
     startedCommandId_ = command.commandId();
+    pendingEventId_.emplace(command.commandId().value());
     return InterceptionStartResult::started;
 }
 
@@ -154,6 +158,17 @@ InterceptionTickResult InterceptorStateMachine::tick(const domain::Timestamp::Du
         state_.emplace(droneId_, position.position, position.measuredAt, outcomeStatus,
                        state_->assignedTargetId());
         stateOutput_.publish(*state_);
+        if (effectResult == InterceptionEffectResult::succeeded)
+        {
+            if (!pendingEventId_.has_value())
+            {
+                throw std::logic_error{"An intercepting drone has no pending event identity"};
+            }
+            eventOutput_.publish(domain::ExplosionEvent{*pendingEventId_, droneId_,
+                                                        latestTargetTrack_->targetId(),
+                                                        position.position, position.measuredAt});
+            pendingEventId_.reset();
+        }
         return effectResult == InterceptionEffectResult::succeeded
                    ? InterceptionTickResult::effectSucceeded
                    : InterceptionTickResult::effectFailed;

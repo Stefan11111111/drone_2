@@ -419,7 +419,7 @@ the note into generic documentation or paste large source listings.
 
 ### 42 — Publish the explosion event
 
-- [ ] **AI prompt:** Complete roadmap step 42 only. Add the explosion-event DataWriter to the
+- [x] **AI prompt:** Complete roadmap step 42 only. Add the explosion-event DataWriter to the
   interceptor DDS adapter and connect the successful simulated effect outcome to it through the
   interceptor core's output boundary. Apply and test the catalog's event QoS. Add
   `docs/learning/42-explosion-publisher.md`, explaining the path from a local physical-effect result

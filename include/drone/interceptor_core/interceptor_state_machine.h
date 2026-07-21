@@ -6,6 +6,7 @@
 #include "drone/domain/interception_command_id.h"
 #include "drone/interceptor_core/assignment_input_port.h"
 #include "drone/interceptor_core/drone_state_output_port.h"
+#include "drone/interceptor_core/explosion_event_output_port.h"
 #include "drone/interceptor_core/flight_control_port.h"
 #include "drone/interceptor_core/interception_command_input_port.h"
 #include "drone/interceptor_core/interception_effect_port.h"
@@ -49,7 +50,8 @@ class InterceptorStateMachine final : public AssignmentInputPort,
   public:
     InterceptorStateMachine(InterceptorConfiguration configuration, PositioningPort &positioning,
                             FlightControlPort &flightControl, InterceptionEffectPort &effect,
-                            DroneStateOutputPort &stateOutput);
+                            DroneStateOutputPort &stateOutput,
+                            ExplosionEventOutputPort &eventOutput);
 
     void start();
     [[nodiscard]] AssignmentHandlingResult
@@ -71,10 +73,12 @@ class InterceptorStateMachine final : public AssignmentInputPort,
     FlightControlPort &flightControl_;
     InterceptionEffectPort &effect_;
     DroneStateOutputPort &stateOutput_;
+    ExplosionEventOutputPort &eventOutput_;
     double arrivalToleranceMeters_;
     std::optional<domain::DroneState> state_;
     std::optional<domain::TargetTrack> latestTargetTrack_;
     std::optional<domain::InterceptionCommandId> startedCommandId_;
+    std::optional<domain::ExplosionEventId> pendingEventId_;
 };
 
 } // namespace drone::interceptor

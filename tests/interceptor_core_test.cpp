@@ -3,6 +3,8 @@
 #include "drone/domain/assignment.h"
 #include "drone/domain/drone_id.h"
 #include "drone/domain/drone_state.h"
+#include "drone/domain/explosion_event.h"
+#include "drone/domain/explosion_event_id.h"
 #include "drone/domain/interception_command.h"
 #include "drone/domain/interception_command_id.h"
 #include "drone/domain/position.h"
@@ -10,6 +12,7 @@
 #include "drone/domain/target_track.h"
 #include "drone/domain/timestamp.h"
 #include "drone/interceptor_core/drone_state_output_port.h"
+#include "drone/interceptor_core/explosion_event_output_port.h"
 #include "drone/interceptor_core/flight_control_port.h"
 #include "drone/interceptor_core/interception_effect_port.h"
 #include "drone/interceptor_core/positioning_port.h"
@@ -30,6 +33,8 @@ using drone::domain::Assignment;
 using drone::domain::DroneId;
 using drone::domain::DroneState;
 using drone::domain::DroneStatus;
+using drone::domain::ExplosionEvent;
+using drone::domain::ExplosionEventId;
 using drone::domain::InterceptionCommand;
 using drone::domain::InterceptionCommandId;
 using drone::domain::Position;
@@ -38,6 +43,7 @@ using drone::domain::TargetTrack;
 using drone::domain::Timestamp;
 using drone::interceptor::AssignmentHandlingResult;
 using drone::interceptor::DroneStateOutputPort;
+using drone::interceptor::ExplosionEventOutputPort;
 using drone::interceptor::FlightControlPort;
 using drone::interceptor::InterceptionEffectPort;
 using drone::interceptor::InterceptionEffectResult;
@@ -82,7 +88,7 @@ class CapturingFlightControl final : public FlightControlPort, public Intercepti
     std::size_t effectTriggerCount{};
 };
 
-class CapturingStateOutput final : public DroneStateOutputPort
+class CapturingStateOutput final : public DroneStateOutputPort, public ExplosionEventOutputPort
 {
   public:
     void publish(const DroneState &state) override
@@ -90,7 +96,13 @@ class CapturingStateOutput final : public DroneStateOutputPort
         publishedStates.push_back(state);
     }
 
+    void publish(const ExplosionEvent &event) override
+    {
+        publishedEvents.push_back(event);
+    }
+
     std::vector<DroneState> publishedStates;
+    std::vector<ExplosionEvent> publishedEvents;
 };
 
 TEST(InterceptorCore, GivenAnUnstartedInterceptor_WhenStarted_ThenItReportsItsCurrentAvailableState)
@@ -102,6 +114,7 @@ TEST(InterceptorCore, GivenAnUnstartedInterceptor_WhenStarted_ThenItReportsItsCu
                                         positioning,
                                         flightControl,
                                         flightControl,
+                                        output,
                                         output};
     EXPECT_FALSE(interceptor.state().has_value());
 
@@ -124,6 +137,7 @@ TEST(InterceptorCore,
                                         positioning,
                                         flightControl,
                                         flightControl,
+                                        output,
                                         output};
     interceptor.start();
 
@@ -142,6 +156,7 @@ TEST(InterceptorCore, GivenAnAssignmentForAnotherDrone_WhenHandled_ThenStateDoes
                                         positioning,
                                         flightControl,
                                         flightControl,
+                                        output,
                                         output};
     interceptor.start();
 
@@ -162,6 +177,7 @@ TEST(InterceptorCore,
                                         positioning,
                                         flightControl,
                                         flightControl,
+                                        output,
                                         output};
     interceptor.start();
     positioning.sample = {.position = Position{13.0, -4.0, 121.0},
@@ -187,6 +203,7 @@ TEST(InterceptorCore, GivenTheCurrentAssignmentAgain_WhenHandled_ThenItIsIgnored
                                         positioning,
                                         flightControl,
                                         flightControl,
+                                        output,
                                         output};
     interceptor.start();
     ASSERT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{42}}),
@@ -209,6 +226,7 @@ TEST(InterceptorCore,
                                         positioning,
                                         flightControl,
                                         flightControl,
+                                        output,
                                         output};
     interceptor.start();
     ASSERT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{42}}),
@@ -231,6 +249,7 @@ TEST(InterceptorCore,
                                         positioning,
                                         flightControl,
                                         flightControl,
+                                        output,
                                         output};
     interceptor.start();
     ASSERT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{42}}),
@@ -267,6 +286,7 @@ TEST(InterceptorCore, GivenInvalidStartCommands_WhenHandled_ThenInterceptorRemai
                                         positioning,
                                         flightControl,
                                         flightControl,
+                                        output,
                                         output};
     const InterceptionCommand correct{InterceptionCommandId{101}, DroneId{7}, TargetId{42}};
 
@@ -296,6 +316,7 @@ TEST(InterceptorCore,
                                         positioning,
                                         flightControl,
                                         flightControl,
+                                        output,
                                         output};
     interceptor.start();
     ASSERT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{42}}),
@@ -321,6 +342,7 @@ TEST(InterceptorCore, GivenAnInterceptingDrone_WhenTicked_ThenItMovesAndReportsC
                                         positioning,
                                         flightControl,
                                         flightControl,
+                                        output,
                                         output};
     interceptor.start();
     ASSERT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{42}}),
@@ -354,6 +376,7 @@ TEST(InterceptorCore, GivenANewerTargetDuringPursuit_WhenTickedAgain_ThenItChang
                                         positioning,
                                         flightControl,
                                         flightControl,
+                                        output,
                                         output};
     interceptor.start();
     ASSERT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{42}}),
@@ -386,6 +409,7 @@ TEST(InterceptorCore,
                                         positioning,
                                         flightControl,
                                         flightControl,
+                                        output,
                                         output};
     interceptor.start();
     ASSERT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{42}}),
@@ -404,8 +428,12 @@ TEST(InterceptorCore,
                                TargetId{42}};
     EXPECT_EQ(interceptor.state(), std::optional{succeeded});
     EXPECT_EQ(flightControl.effectTriggerCount, 1U);
+    const ExplosionEvent expectedEvent{ExplosionEventId{101}, DroneId{7}, TargetId{42},
+                                       positioning.sample.position, positioning.sample.measuredAt};
+    EXPECT_EQ(output.publishedEvents, (std::vector{expectedEvent}));
     EXPECT_EQ(interceptor.tick(100ms), InterceptionTickResult::notIntercepting);
     EXPECT_EQ(flightControl.effectTriggerCount, 1U);
+    EXPECT_EQ(output.publishedEvents, (std::vector{expectedEvent}));
 }
 
 TEST(InterceptorCore, GivenTheInterceptionEffectFails_WhenArrivalIsDetected_ThenFailureIsFinal)
@@ -418,6 +446,7 @@ TEST(InterceptorCore, GivenTheInterceptionEffectFails_WhenArrivalIsDetected_Then
                                         positioning,
                                         flightControl,
                                         flightControl,
+                                        output,
                                         output};
     interceptor.start();
     ASSERT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{42}}),
@@ -434,8 +463,10 @@ TEST(InterceptorCore, GivenTheInterceptionEffectFails_WhenArrivalIsDetected_Then
                             DroneStatus::interceptionFailed, TargetId{42}};
     EXPECT_EQ(interceptor.state(), std::optional{failed});
     EXPECT_EQ(flightControl.effectTriggerCount, 1U);
+    EXPECT_TRUE(output.publishedEvents.empty());
     EXPECT_EQ(interceptor.tick(100ms), InterceptionTickResult::notIntercepting);
     EXPECT_EQ(flightControl.effectTriggerCount, 1U);
+    EXPECT_TRUE(output.publishedEvents.empty());
 }
 
 TEST(InterceptorCore, GivenAnInvalidArrivalTolerance_WhenConstructed_ThenItIsRejected)
@@ -448,6 +479,7 @@ TEST(InterceptorCore, GivenAnInvalidArrivalTolerance_WhenConstructed_ThenItIsRej
                                           positioning,
                                           flightControl,
                                           flightControl,
+                                          output,
                                           output}),
                  std::invalid_argument);
     EXPECT_THROW((InterceptorStateMachine{
@@ -456,6 +488,7 @@ TEST(InterceptorCore, GivenAnInvalidArrivalTolerance_WhenConstructed_ThenItIsRej
                      positioning,
                      flightControl,
                      flightControl,
+                     output,
                      output}),
                  std::invalid_argument);
 }
