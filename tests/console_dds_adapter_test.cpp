@@ -1,9 +1,13 @@
+#include "drone/console_core/drone_projection.h"
 #include "drone/console_core/target_projection.h"
-#include "drone/console_dds_adapter/target_track_subscriber.h"
+#include "drone/console_dds_adapter/console_subscriber.h"
 #include "drone/dds_transport/domain_participant_owner.h"
+#include "drone/dds_transport/drone_state_writer.h"
 #include "drone/dds_transport/target_track_mapping.h"
 #include "drone/dds_transport/target_track_topic.h"
 #include "drone/dds_transport/target_track_writer.h"
+#include "drone/domain/drone_id.h"
+#include "drone/domain/drone_state.h"
 #include "drone/domain/position.h"
 #include "drone/domain/target_id.h"
 #include "drone/domain/target_track.h"
@@ -20,6 +24,7 @@
 #include <target_track.hpp>
 
 #include <chrono>
+#include <optional>
 #include <stdexcept>
 #include <string>
 
@@ -28,15 +33,21 @@
 namespace
 {
 
+using drone::console::DroneProjection;
+using drone::console::DroneUpdateResult;
 using drone::console::TargetProjection;
 using drone::console::TargetUpdateResult;
-using drone::console_dds::TargetTrackReceiveIssue;
-using drone::console_dds::TargetTrackSubscriber;
+using drone::console_dds::ConsoleSubscriber;
+using drone::console_dds::ReceiveIssue;
 using drone::dds_transport::DomainParticipantOwner;
+using drone::dds_transport::DroneStateWriter;
 using drone::dds_transport::TargetTrackTopic;
 using drone::dds_transport::TargetTrackWriter;
 using drone::dds_transport::targetTrackWriterQos;
 using drone::dds_transport::toWireTargetTrack;
+using drone::domain::DroneId;
+using drone::domain::DroneState;
+using drone::domain::DroneStatus;
 using drone::domain::Position;
 using drone::domain::TargetId;
 using drone::domain::TargetTrack;
@@ -47,6 +58,7 @@ using namespace std::chrono_literals;
 constexpr DomainId_t validDeliveryDomainId{185};
 constexpr DomainId_t invalidDeliveryDomainId{186};
 constexpr DomainId_t boundedShutdownDomainId{187};
+constexpr DomainId_t droneDeliveryDomainId{184};
 constexpr auto discoveryTimeout{5s};
 constexpr auto dataTimeout{5s};
 
@@ -119,7 +131,9 @@ TEST(ConsoleDdsAdapter,
      GivenAMatchedObserverWriter_WhenATrackArrives_ThenItIsDeliveredIntoTheConsoleProjection)
 {
     TargetProjection projection;
-    TargetTrackSubscriber subscriber{validDeliveryDomainId, "drone_step_25_console", projection};
+    DroneProjection drones;
+    ConsoleSubscriber subscriber{validDeliveryDomainId, "drone_step_31_console", projection,
+                                 drones};
     DomainParticipantOwner writerParticipant{validDeliveryDomainId, "drone_step_25_observer"};
     TargetTrackWriter writer{writerParticipant.participant()};
     ASSERT_TRUE(writer.waitForReaderMatch(discoveryTimeout))
@@ -128,7 +142,7 @@ TEST(ConsoleDdsAdapter,
     const TargetTrack sent{TargetId{42}, Position{125.25, -30.5, 850.75}, Timestamp{1'500ms}};
     writer.write(sent);
 
-    const auto result = subscriber.receiveNext(dataTimeout);
+    const auto result = subscriber.receiveNextTarget(dataTimeout);
     ASSERT_TRUE(result.has_value())
         << "No valid TargetTrack reached console core within " << dataTimeout.count() << " ms";
     EXPECT_EQ(*result, TargetUpdateResult::added);
@@ -139,34 +153,35 @@ TEST(ConsoleDdsAdapter,
      GivenMalformedAndInstanceStateSamples_WhenTheyAreTaken_ThenTheyAreDiscardedSafely)
 {
     TargetProjection projection;
-    TargetTrackSubscriber subscriber{invalidDeliveryDomainId, "drone_step_25_invalid_console",
-                                     projection};
+    DroneProjection drones;
+    ConsoleSubscriber subscriber{invalidDeliveryDomainId, "drone_step_31_invalid_console",
+                                 projection, drones};
     DomainParticipantOwner writerParticipant{invalidDeliveryDomainId, "drone_step_25_wire_writer"};
     WireTargetTrackWriter writer{writerParticipant.participant()};
-    ASSERT_TRUE(subscriber.waitForWriterMatch(discoveryTimeout))
+    ASSERT_TRUE(subscriber.waitForTargetWriterMatch(discoveryTimeout))
         << "No test TargetTrack DataWriter matched within " << discoveryTimeout.count() << " ms";
 
     drone::dds::TargetTrack malformed;
     malformed.target_id(0);
     writer.write(malformed);
 
-    const auto malformedResult = subscriber.receiveNext(dataTimeout);
+    const auto malformedResult = subscriber.receiveNextTarget(dataTimeout);
     ASSERT_FALSE(malformedResult.has_value());
-    EXPECT_EQ(malformedResult.error(), TargetTrackReceiveIssue::discardedMalformedData);
+    EXPECT_EQ(malformedResult.error(), ReceiveIssue::discardedMalformedData);
     EXPECT_TRUE(projection.targetTracks().empty());
 
     const TargetTrack valid{TargetId{7}, Position{1.0, 2.0, 3.0}, Timestamp{2'000ms}};
     const auto validWireSample = toWireTargetTrack(valid);
     writer.write(validWireSample);
-    const auto validResult = subscriber.receiveNext(dataTimeout);
+    const auto validResult = subscriber.receiveNextTarget(dataTimeout);
     ASSERT_TRUE(validResult.has_value());
     EXPECT_EQ(*validResult, TargetUpdateResult::added);
     EXPECT_EQ(projection.latestTarget(TargetId{7}), valid);
 
     writer.dispose(validWireSample);
-    const auto invalidDataResult = subscriber.receiveNext(dataTimeout);
+    const auto invalidDataResult = subscriber.receiveNextTarget(dataTimeout);
     ASSERT_FALSE(invalidDataResult.has_value());
-    EXPECT_EQ(invalidDataResult.error(), TargetTrackReceiveIssue::discardedInvalidData);
+    EXPECT_EQ(invalidDataResult.error(), ReceiveIssue::discardedInvalidData);
     EXPECT_EQ(projection.latestTarget(TargetId{7}), valid);
 }
 
@@ -174,14 +189,38 @@ TEST(ConsoleDdsAdapter,
      GivenNoAvailableSample_WhenTheBoundedReceiveExpires_ThenTheAdapterCanShutDownCleanly)
 {
     TargetProjection projection;
-    TargetTrackSubscriber subscriber{boundedShutdownDomainId, "drone_step_25_bounded_console",
-                                     projection};
+    DroneProjection drones;
+    ConsoleSubscriber subscriber{boundedShutdownDomainId, "drone_step_31_bounded_console",
+                                 projection, drones};
 
-    const auto result = subscriber.receiveNext(10ms);
+    const auto result = subscriber.receiveNextTarget(10ms);
 
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), TargetTrackReceiveIssue::timedOut);
+    EXPECT_EQ(result.error(), ReceiveIssue::timedOut);
     EXPECT_TRUE(projection.targetTracks().empty());
+}
+
+TEST(ConsoleDdsAdapter,
+     GivenAMatchedInterceptorWriter_WhenDroneStateArrives_ThenItIsDeliveredIntoTheProjection)
+{
+    TargetProjection targets;
+    DroneProjection drones;
+    ConsoleSubscriber subscriber{droneDeliveryDomainId, "drone_step_31_drone_console", targets,
+                                 drones};
+    DomainParticipantOwner writerParticipant{droneDeliveryDomainId, "drone_step_31_interceptor"};
+    DroneStateWriter writer{writerParticipant.participant()};
+    ASSERT_TRUE(writer.waitForReaderMatch(discoveryTimeout))
+        << "No console DroneState DataReader matched within " << discoveryTimeout.count() << " ms";
+
+    const DroneState sent{DroneId{7}, Position{1.5, -2.25, 30.0}, Timestamp{2'000ms},
+                          DroneStatus::available, std::nullopt};
+    writer.write(sent);
+
+    const auto result = subscriber.receiveNextDrone(dataTimeout);
+    ASSERT_TRUE(result.has_value())
+        << "No valid DroneState reached console core within " << dataTimeout.count() << " ms";
+    EXPECT_EQ(*result, DroneUpdateResult::added);
+    EXPECT_EQ(drones.latestDrone(DroneId{7}), sent);
 }
 
 } // namespace

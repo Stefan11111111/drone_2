@@ -97,7 +97,14 @@ add_library(observer_core src/observer_core/target_tracker.cpp)
 target_include_directories(observer_core PUBLIC include)
 target_link_libraries(observer_core PUBLIC drone_domain)
 
-add_library(console_core src/console_core/target_projection.cpp)
+add_library(interceptor_core src/interceptor_core/interceptor_state_machine.cpp)
+target_include_directories(interceptor_core PUBLIC include)
+target_link_libraries(interceptor_core PUBLIC drone_domain)
+
+add_library(
+  console_core
+  src/console_core/drone_projection.cpp
+  src/console_core/target_projection.cpp)
 target_include_directories(console_core PUBLIC include)
 target_link_libraries(console_core PUBLIC drone_domain)
 
@@ -109,11 +116,18 @@ add_library(simulated_radar_adapter src/simulated_radar_adapter/simulated_radar.
 target_include_directories(simulated_radar_adapter PUBLIC include)
 target_link_libraries(simulated_radar_adapter PUBLIC observer_core)
 
+add_library(simulated_vehicle_adapter src/simulated_vehicle_adapter/simulated_vehicle.cpp)
+target_include_directories(simulated_vehicle_adapter PUBLIC include)
+target_link_libraries(simulated_vehicle_adapter PUBLIC interceptor_core)
+
 add_library(
   drone_dds_transport
   src/drone_dds_transport/assignment_mapping.cpp
   src/drone_dds_transport/domain_participant_owner.cpp
   src/drone_dds_transport/drone_state_mapping.cpp
+  src/drone_dds_transport/drone_state_reader.cpp
+  src/drone_dds_transport/drone_state_topic.cpp
+  src/drone_dds_transport/drone_state_writer.cpp
   src/drone_dds_transport/explosion_event_mapping.cpp
   src/drone_dds_transport/interception_command_mapping.cpp
   src/drone_dds_transport/target_track_reader.cpp
@@ -127,13 +141,21 @@ add_library(observer_dds_adapter src/observer_dds_adapter/target_track_publisher
 target_include_directories(observer_dds_adapter PUBLIC include)
 target_link_libraries(observer_dds_adapter PUBLIC observer_core drone_dds_transport)
 
-add_library(console_dds_adapter src/console_dds_adapter/target_track_subscriber.cpp)
+add_library(interceptor_dds_adapter src/interceptor_dds_adapter/drone_state_publisher.cpp)
+target_include_directories(interceptor_dds_adapter PUBLIC include)
+target_link_libraries(interceptor_dds_adapter PUBLIC interceptor_core drone_dds_transport)
+
+add_library(console_dds_adapter src/console_dds_adapter/console_subscriber.cpp)
 target_include_directories(console_dds_adapter PUBLIC include)
 target_link_libraries(console_dds_adapter PUBLIC console_core drone_dds_transport)
 
 add_executable(observer src/observer_app/main.cpp)
 target_link_libraries(
   observer PRIVATE observer_core observer_dds_adapter simulated_radar_adapter)
+
+add_executable(interceptor src/interceptor_app/main.cpp)
+target_link_libraries(
+  interceptor PRIVATE interceptor_core interceptor_dds_adapter simulated_vehicle_adapter)
 
 add_executable(console src/console_app/main.cpp)
 target_link_libraries(
@@ -218,6 +240,10 @@ add_executable(observer_core_test tests/observer_core_test.cpp)
 target_link_libraries(observer_core_test PRIVATE GTest::gtest_main observer_core)
 gtest_discover_tests(observer_core_test)
 
+add_executable(interceptor_core_test tests/interceptor_core_test.cpp)
+target_link_libraries(interceptor_core_test PRIVATE GTest::gtest_main interceptor_core)
+gtest_discover_tests(interceptor_core_test)
+
 add_executable(console_core_test tests/console_core_test.cpp)
 target_link_libraries(console_core_test PRIVATE GTest::gtest_main console_core)
 gtest_discover_tests(console_core_test)
@@ -237,6 +263,11 @@ add_executable(simulated_radar_adapter_test tests/simulated_radar_adapter_test.c
 target_link_libraries(
   simulated_radar_adapter_test PRIVATE GTest::gtest_main simulated_radar_adapter)
 gtest_discover_tests(simulated_radar_adapter_test)
+
+add_executable(simulated_vehicle_adapter_test tests/simulated_vehicle_adapter_test.cpp)
+target_link_libraries(
+  simulated_vehicle_adapter_test PRIVATE GTest::gtest_main simulated_vehicle_adapter)
+gtest_discover_tests(simulated_vehicle_adapter_test)
 
 add_library(process_test_support tests/process_test_support.cpp)
 target_include_directories(process_test_support PUBLIC tests)
@@ -258,3 +289,34 @@ target_link_libraries(
   observer_console_process_test PRIVATE GTest::gtest_main process_test_support)
 add_dependencies(observer_console_process_test observer console)
 gtest_discover_tests(observer_console_process_test PROPERTIES TIMEOUT 15)
+
+add_executable(live_system_state_process_test tests/live_system_state_process_test.cpp)
+target_compile_definitions(
+  live_system_state_process_test
+  PRIVATE OBSERVER_EXECUTABLE_PATH="$<TARGET_FILE:observer>"
+          CONSOLE_EXECUTABLE_PATH="$<TARGET_FILE:console>"
+          INTERCEPTOR_EXECUTABLE_PATH="$<TARGET_FILE:interceptor>")
+target_link_libraries(
+  live_system_state_process_test PRIVATE GTest::gtest_main process_test_support)
+add_dependencies(live_system_state_process_test observer console interceptor)
+gtest_discover_tests(live_system_state_process_test PROPERTIES TIMEOUT 15)
+
+add_executable(late_joiner_drone_state_process_test tests/late_joiner_drone_state_process_test.cpp)
+target_compile_definitions(
+  late_joiner_drone_state_process_test
+  PRIVATE CONSOLE_EXECUTABLE_PATH="$<TARGET_FILE:console>"
+          INTERCEPTOR_EXECUTABLE_PATH="$<TARGET_FILE:interceptor>")
+target_link_libraries(
+  late_joiner_drone_state_process_test PRIVATE GTest::gtest_main process_test_support)
+add_dependencies(late_joiner_drone_state_process_test console interceptor)
+gtest_discover_tests(late_joiner_drone_state_process_test PROPERTIES TIMEOUT 20)
+
+add_executable(interceptor_publisher_process_test tests/interceptor_publisher_process_test.cpp)
+target_compile_definitions(
+  interceptor_publisher_process_test
+  PRIVATE INTERCEPTOR_EXECUTABLE_PATH="$<TARGET_FILE:interceptor>")
+target_link_libraries(
+  interceptor_publisher_process_test
+  PRIVATE GTest::gtest_main drone_dds_transport drone_dds_types fastdds process_test_support)
+add_dependencies(interceptor_publisher_process_test interceptor)
+gtest_discover_tests(interceptor_publisher_process_test PROPERTIES TIMEOUT 15)

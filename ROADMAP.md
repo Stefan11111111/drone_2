@@ -289,7 +289,7 @@ the note into generic documentation or paste large source listings.
 
 ### 28 — Add the interceptor core state machine shell
 
-- [ ] **AI prompt:** Complete roadmap step 28 only. Create `interceptor_core` with explicit state,
+- [x] **AI prompt:** Complete roadmap step 28 only. Create `interceptor_core` with explicit state,
   positioning/flight-control ports, and a drone-state output port, but implement only startup in an
   available/idle state. Use test doubles and add no DDS or simulation code. Add
   `docs/learning/28-interceptor-state-machine.md`, explaining why a deterministic core state machine
@@ -298,7 +298,7 @@ the note into generic documentation or paste large source listings.
 
 ### 29 — Simulate vehicle position and motion
 
-- [ ] **AI prompt:** Complete roadmap step 29 only. Implement `simulated_vehicle_adapter` for
+- [x] **AI prompt:** Complete roadmap step 29 only. Implement `simulated_vehicle_adapter` for
   deterministic position and bounded time-step movement through interceptor-core ports. Do not add
   target-following decisions or explosion behavior yet. Add
   `docs/learning/29-simulated-vehicle.md`, explaining how the same core could later drive physical
@@ -307,7 +307,7 @@ the note into generic documentation or paste large source listings.
 
 ### 30 — Publish interceptor state
 
-- [ ] **AI prompt:** Complete roadmap step 30 only. Add the drone-state DataWriter path to
+- [x] **AI prompt:** Complete roadmap step 30 only. Add the drone-state DataWriter path to
   `interceptor_dds_adapter` and a minimal interceptor composition executable wired to the simulated
   vehicle. Publish its available state using the catalog's key and QoS. Add
   `docs/learning/30-interceptor-state-publisher.md`, explaining keyed state updates and DDS instance
@@ -316,7 +316,7 @@ the note into generic documentation or paste large source listings.
 
 ### 31 — Show live drone state on the console
 
-- [ ] **AI prompt:** Complete roadmap step 31 only. Extend console core, its DDS adapter, and the
+- [x] **AI prompt:** Complete roadmap step 31 only. Extend console core, its DDS adapter, and the
   terminal UI just enough to receive, project, and display latest drone state by identifier. Keep
   the change limited to the state path and test projection, DDS delivery, and rendering at their
   respective boundaries. Add `docs/learning/31-console-drone-state.md`, explaining how one
@@ -325,7 +325,7 @@ the note into generic documentation or paste large source listings.
 
 ### 32 — Verify late discovery of an available interceptor
 
-- [ ] **AI prompt:** Complete roadmap step 32 only. Extend the process-level integration scenario to
+- [x] **AI prompt:** Complete roadmap step 32 only. Extend the process-level integration scenario to
   start the interceptor and console in both orders and verify the documented drone-state QoS
   behavior. Change QoS only if the experiment disproves step 10's hypothesis, and update the catalog
   with evidence. Add `docs/learning/32-late-joiner-state.md`, explaining durability, history, and
