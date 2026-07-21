@@ -138,6 +138,9 @@ add_library(
   src/drone_dds_transport/drone_state_writer.cpp
   src/drone_dds_transport/explosion_event_mapping.cpp
   src/drone_dds_transport/interception_command_mapping.cpp
+  src/drone_dds_transport/interception_command_reader.cpp
+  src/drone_dds_transport/interception_command_topic.cpp
+  src/drone_dds_transport/interception_command_writer.cpp
   src/drone_dds_transport/target_track_reader.cpp
   src/drone_dds_transport/target_track_mapping.cpp
   src/drone_dds_transport/target_track_topic.cpp
@@ -152,14 +155,16 @@ target_link_libraries(observer_dds_adapter PUBLIC observer_core drone_dds_transp
 add_library(
   interceptor_dds_adapter
   src/interceptor_dds_adapter/assignment_subscriber.cpp
-  src/interceptor_dds_adapter/drone_state_publisher.cpp)
+  src/interceptor_dds_adapter/drone_state_publisher.cpp
+  src/interceptor_dds_adapter/interception_command_subscriber.cpp)
 target_include_directories(interceptor_dds_adapter PUBLIC include)
 target_link_libraries(interceptor_dds_adapter PUBLIC interceptor_core drone_dds_transport)
 
 add_library(
   console_dds_adapter
   src/console_dds_adapter/assignment_publisher.cpp
-  src/console_dds_adapter/console_subscriber.cpp)
+  src/console_dds_adapter/console_subscriber.cpp
+  src/console_dds_adapter/interception_command_publisher.cpp)
 target_include_directories(console_dds_adapter PUBLIC include)
 target_link_libraries(console_dds_adapter PUBLIC console_core drone_dds_transport)
 
@@ -278,6 +283,13 @@ target_link_libraries(
   assignment_dds_adapter_test
   PRIVATE GTest::gtest_main console_dds_adapter interceptor_dds_adapter)
 gtest_discover_tests(assignment_dds_adapter_test)
+
+add_executable(
+  interception_command_dds_adapter_test tests/interception_command_dds_adapter_test.cpp)
+target_link_libraries(
+  interception_command_dds_adapter_test
+  PRIVATE GTest::gtest_main console_dds_adapter interceptor_dds_adapter)
+gtest_discover_tests(interception_command_dds_adapter_test)
 
 add_executable(simulated_radar_adapter_test tests/simulated_radar_adapter_test.cpp)
 target_link_libraries(

@@ -370,7 +370,7 @@ the note into generic documentation or paste large source listings.
 
 ### 37 — Send interception commands through DDS
 
-- [ ] **AI prompt:** Complete roadmap step 37 only. Add the interception-command DataWriter and
+- [x] **AI prompt:** Complete roadmap step 37 only. Add the interception-command DataWriter and
   DataReader adapter path with the catalog's QoS, mapping, duplicate policy, and safe shutdown.
   Deliver commands to a captured interceptor input without starting motion yet. Add
   `docs/learning/37-command-topic.md`, explaining how command identity and QoS combine to handle
