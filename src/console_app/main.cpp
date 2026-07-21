@@ -1,7 +1,13 @@
+#include "drone/console_core/assignment_use_case.h"
 #include "drone/console_core/drone_projection.h"
+#include "drone/console_core/interception_command_use_case.h"
 #include "drone/console_core/target_projection.h"
+#include "drone/console_dds_adapter/assignment_publisher.h"
 #include "drone/console_dds_adapter/console_subscriber.h"
+#include "drone/console_dds_adapter/interception_command_publisher.h"
 #include "drone/console_ui_adapter/terminal_view.h"
+#include "drone/domain/drone_id.h"
+#include "drone/domain/target_id.h"
 
 #include <charconv>
 #include <chrono>
@@ -23,16 +29,31 @@ using namespace std::chrono_literals;
 constexpr std::uint32_t defaultDomainId{0};
 constexpr std::uint64_t maximumDefaultPortDomainId{232};
 constexpr auto receiveTimeout{50ms};
+constexpr std::string_view automatedPursuitArgument{"--auto-pursuit"};
 
-[[nodiscard]] std::uint32_t parseDomainId(const std::span<const char *const> arguments)
+struct Configuration final
 {
-    if (arguments.size() > 2)
+    std::uint32_t domainId{defaultDomainId};
+    bool automatePursuit{false};
+};
+
+struct AutomatedPursuitState final
+{
+    bool assignmentSent{false};
+    bool startSent{false};
+};
+
+[[nodiscard]] Configuration parseConfiguration(const std::span<const char *const> arguments)
+{
+    if (arguments.size() > 3)
     {
-        throw std::invalid_argument{"usage: console [domain-id]"};
+        throw std::invalid_argument{"usage: console [domain-id [--auto-pursuit]]"};
     }
+
+    Configuration configuration;
     if (arguments.size() == 1)
     {
-        return defaultDomainId;
+        return configuration;
     }
 
     std::uint64_t domainId{};
@@ -47,7 +68,16 @@ constexpr auto receiveTimeout{50ms};
         throw std::invalid_argument{"domain-id must not exceed 232"};
     }
 
-    return static_cast<std::uint32_t>(domainId);
+    configuration.domainId = static_cast<std::uint32_t>(domainId);
+    if (arguments.size() == 3)
+    {
+        if (arguments[2] != automatedPursuitArgument)
+        {
+            throw std::invalid_argument{"the only supported console action mode is --auto-pursuit"};
+        }
+        configuration.automatePursuit = true;
+    }
+    return configuration;
 }
 
 [[nodiscard]] std::string_view
@@ -82,18 +112,51 @@ void reportDroneResult(const drone::console_dds::DroneStateReceiveResult &receiv
     }
 }
 
-void run(const std::uint32_t domainId)
+void automatePursuit(const bool assignmentReaderMatched, const bool commandReaderMatched,
+                     drone::console::AssignmentUseCase &assignment,
+                     drone::console::InterceptionCommandUseCase &command,
+                     AutomatedPursuitState &automation)
+{
+    const drone::domain::DroneId droneId{1};
+    const drone::domain::TargetId targetId{1};
+
+    if (!automation.assignmentSent && assignmentReaderMatched &&
+        assignment.assign(droneId, targetId) == drone::console::AssignmentResult::assigned)
+    {
+        automation.assignmentSent = true;
+        std::cout << "console: automated assignment sent for drone 1 to target 1\n" << std::flush;
+    }
+    if (automation.assignmentSent && !automation.startSent && commandReaderMatched &&
+        command.start(droneId) == drone::console::StartInterceptionResult::started)
+    {
+        automation.startSent = true;
+        std::cout << "console: automated interception start sent for drone 1\n" << std::flush;
+    }
+}
+
+void run(const Configuration &configuration)
 {
     drone::console::TargetProjection projection;
     drone::console::DroneProjection drones;
-    drone::console_dds::ConsoleSubscriber subscriber{domainId, "drone_console", projection, drones};
+    drone::console_dds::ConsoleSubscriber subscriber{configuration.domainId, "drone_console",
+                                                     projection, drones};
+    drone::console_dds::AssignmentPublisher assignmentPublisher{configuration.domainId,
+                                                                "drone_console_assignment_writer"};
+    drone::console_dds::InterceptionCommandPublisher commandPublisher{
+        configuration.domainId, "drone_console_command_writer"};
+    drone::console::AssignmentUseCase assignment{projection, drones, assignmentPublisher};
+    drone::console::InterceptionCommandUseCase command{drones, commandPublisher};
     const drone::console_ui::TerminalView view{std::cout};
 
-    std::cout << "console: readers ready for targets and drones in DDS domain " << domainId << '\n';
+    std::cout << "console: readers ready for targets and drones in DDS domain "
+              << configuration.domainId << '\n';
     view.render(projection, drones);
 
     bool targetWriterMatched{false};
     bool droneWriterMatched{false};
+    bool assignmentReaderMatched{false};
+    bool commandReaderMatched{false};
+    AutomatedPursuitState automation;
     while (true)
     {
         if (!targetWriterMatched && subscriber.waitForTargetWriterMatch(0ms))
@@ -105,6 +168,14 @@ void run(const std::uint32_t domainId)
         {
             droneWriterMatched = true;
             std::cout << "console: matched interceptor DroneState writer\n" << std::flush;
+        }
+        if (!assignmentReaderMatched && assignmentPublisher.waitForInterceptorMatch(0ms))
+        {
+            assignmentReaderMatched = true;
+        }
+        if (!commandReaderMatched && commandPublisher.waitForInterceptorMatch(0ms))
+        {
+            commandReaderMatched = true;
         }
 
         const auto target = subscriber.receiveNextTarget(receiveTimeout);
@@ -126,6 +197,12 @@ void run(const std::uint32_t domainId)
         {
             reportDroneResult(drone);
         }
+
+        if (configuration.automatePursuit)
+        {
+            automatePursuit(assignmentReaderMatched, commandReaderMatched, assignment, command,
+                            automation);
+        }
     }
 }
 
@@ -135,7 +212,7 @@ int main(const int argumentCount, const char *const arguments[])
 {
     try
     {
-        run(parseDomainId(
+        run(parseConfiguration(
             std::span<const char *const>{arguments, static_cast<std::size_t>(argumentCount)}));
         return 0;
     }

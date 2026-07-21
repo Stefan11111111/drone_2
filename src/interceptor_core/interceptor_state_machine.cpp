@@ -106,7 +106,7 @@ InterceptorStateMachine::startInterception(const domain::InterceptionCommand &co
     {
         return InterceptionStartResult::notAssigned;
     }
-    if (command.targetId() != *state_->assignedTargetId())
+    if (state_->assignedTargetId() != command.targetId())
     {
         return InterceptionStartResult::targetMismatch;
     }
@@ -133,7 +133,7 @@ InterceptionTickResult InterceptorStateMachine::tick(const domain::Timestamp::Du
     flightControl_.moveToward(latestTargetTrack_->position(), timeStep);
     const auto position = positioning_.currentPosition();
     state_.emplace(droneId_, position.position, position.measuredAt,
-                   domain::DroneStatus::intercepting, *state_->assignedTargetId());
+                   domain::DroneStatus::intercepting, state_->assignedTargetId());
     stateOutput_.publish(*state_);
     return InterceptionTickResult::moved;
 }

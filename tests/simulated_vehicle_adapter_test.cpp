@@ -92,6 +92,16 @@ TEST(SimulatedVehicle,
     EXPECT_EQ(vehicle.currentPosition().measuredAt, Timestamp{1'250ms});
 }
 
+TEST(SimulatedVehicle, GivenNoMovement_WhenSimulationTimeAdvances_ThenPositionRemainsUnchanged)
+{
+    SimulatedVehicle vehicle{vehicleConfiguration()};
+
+    vehicle.advanceTime(250ms);
+
+    EXPECT_EQ(vehicle.currentPosition(), (PositionSample{.position = Position{0.0, 0.0, 10.0},
+                                                         .measuredAt = Timestamp{1'250ms}}));
+}
+
 TEST(SimulatedVehicle, GivenInvalidSpeedOrTimeStep_WhenUsed_ThenItIsRejected)
 {
     auto zeroSpeed = vehicleConfiguration();

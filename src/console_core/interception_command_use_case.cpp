@@ -31,13 +31,18 @@ StartInterceptionResult InterceptionCommandUseCase::start(const domain::DroneId 
     {
         return StartInterceptionResult::droneNotAssigned;
     }
+    const auto assignedTargetId = drone->assignedTargetId();
+    if (!assignedTargetId.has_value())
+    {
+        return StartInterceptionResult::droneNotAssigned;
+    }
     if (nextCommandId_ == std::numeric_limits<std::uint64_t>::max())
     {
         throw std::overflow_error{"The console exhausted interception command identifiers"};
     }
 
     const domain::InterceptionCommand command{domain::InterceptionCommandId{nextCommandId_},
-                                              droneId, *drone->assignedTargetId()};
+                                              droneId, *assignedTargetId};
     output_.publish(command);
     pendingStarts_.insert(droneId);
     ++nextCommandId_;

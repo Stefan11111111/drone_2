@@ -122,7 +122,8 @@ TEST(InterceptorCore, GivenAnAssignmentForAnotherDrone_WhenHandled_ThenStateDoes
 
     EXPECT_EQ(interceptor.onAssignment(Assignment{DroneId{8}, TargetId{42}}),
               AssignmentHandlingResult::wrongDrone);
-    EXPECT_EQ(interceptor.state()->status(), DroneStatus::available);
+    EXPECT_TRUE(interceptor.state().has_value() &&
+                interceptor.state()->status() == DroneStatus::available);
     EXPECT_EQ(output.publishedStates.size(), 1U);
 }
 
@@ -160,7 +161,8 @@ TEST(InterceptorCore, GivenTheCurrentAssignmentAgain_WhenHandled_ThenItIsIgnored
 
     EXPECT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{42}}),
               AssignmentHandlingResult::duplicate);
-    EXPECT_EQ(interceptor.state()->assignedTargetId(), TargetId{42});
+    EXPECT_TRUE(interceptor.state().has_value() &&
+                interceptor.state()->assignedTargetId() == TargetId{42});
     EXPECT_EQ(output.publishedStates.size(), 2U);
 }
 
@@ -177,7 +179,8 @@ TEST(InterceptorCore,
 
     EXPECT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{43}}),
               AssignmentHandlingResult::conflicting);
-    EXPECT_EQ(interceptor.state()->assignedTargetId(), TargetId{42});
+    EXPECT_TRUE(interceptor.state().has_value() &&
+                interceptor.state()->assignedTargetId() == TargetId{42});
     EXPECT_EQ(output.publishedStates.size(), 2U);
 }
 
@@ -233,7 +236,8 @@ TEST(InterceptorCore, GivenInvalidStartCommands_WhenHandled_ThenInterceptorRemai
     EXPECT_EQ(interceptor.startInterception(
                   InterceptionCommand{InterceptionCommandId{101}, DroneId{7}, TargetId{43}}),
               InterceptionStartResult::targetMismatch);
-    EXPECT_EQ(interceptor.state()->status(), DroneStatus::assigned);
+    EXPECT_TRUE(interceptor.state().has_value() &&
+                interceptor.state()->status() == DroneStatus::assigned);
     EXPECT_EQ(output.publishedStates.size(), 2U);
 }
 
@@ -252,7 +256,8 @@ TEST(InterceptorCore,
 
     EXPECT_EQ(interceptor.startInterception(command), InterceptionStartResult::started);
     EXPECT_EQ(interceptor.startInterception(command), InterceptionStartResult::duplicate);
-    EXPECT_EQ(interceptor.state()->status(), DroneStatus::intercepting);
+    EXPECT_TRUE(interceptor.state().has_value() &&
+                interceptor.state()->status() == DroneStatus::intercepting);
     EXPECT_EQ(interceptor.tick(100ms), InterceptionTickResult::awaitingTarget);
     EXPECT_TRUE(flightControl.destinations.empty());
     EXPECT_EQ(output.publishedStates.size(), 3U);

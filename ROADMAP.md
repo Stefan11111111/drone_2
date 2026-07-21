@@ -398,7 +398,7 @@ the note into generic documentation or paste large source listings.
 
 ### 40 — Verify pursuit of a moving target
 
-- [ ] **AI prompt:** Complete roadmap step 40 only. Wire the interceptor process loop to the
+- [x] **AI prompt:** Complete roadmap step 40 only. Wire the interceptor process loop to the
   simulated vehicle and add a bounded separate-process scenario that assigns, starts, and observes
   the drone change course after newer target samples. Add only the orchestration needed for
   deterministic automation of console actions. Add `docs/learning/40-moving-target-pursuit.md`,

@@ -132,9 +132,9 @@ TEST(AssignmentDdsAdapter,
     const auto received = stateReader.takeNext();
     ASSERT_TRUE(received.has_value());
     ASSERT_TRUE(received->has_value());
-    EXPECT_EQ(**received,
-              (DroneState{DroneId{7}, positioning.sample.position, positioning.sample.measuredAt,
-                          DroneStatus::assigned, TargetId{42}}));
+    EXPECT_EQ(*received, (std::optional{DroneState{DroneId{7}, positioning.sample.position,
+                                                   positioning.sample.measuredAt,
+                                                   DroneStatus::assigned, TargetId{42}}}));
 }
 
 } // namespace

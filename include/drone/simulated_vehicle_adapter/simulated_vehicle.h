@@ -25,6 +25,7 @@ class SimulatedVehicle final : public interceptor::PositioningPort,
     [[nodiscard]] interceptor::PositionSample currentPosition() const override;
     void moveToward(const domain::Position &destination,
                     domain::Timestamp::Duration timeStep) override;
+    void advanceTime(domain::Timestamp::Duration timeStep);
 
   private:
     domain::Position position_;
