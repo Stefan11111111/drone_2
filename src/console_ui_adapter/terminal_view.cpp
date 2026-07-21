@@ -2,6 +2,7 @@
 
 #include "drone/domain/drone_id.h"
 #include "drone/domain/drone_state.h"
+#include "drone/domain/explosion_event.h"
 #include "drone/domain/position.h"
 #include "drone/domain/target_id.h"
 #include "drone/domain/target_track.h"
@@ -91,6 +92,29 @@ void renderDrones(std::ostringstream &snapshot, const console::DroneProjection &
     }
 }
 
+void renderOutcomes(std::ostringstream &snapshot, const console::OutcomeProjection &projection)
+{
+    const auto outcomes = projection.outcomes();
+    snapshot << "Interception outcomes (" << outcomes.size() << ")\n"
+             << "Event | Drone | Target | X (m) | Y (m) | Z (m) | Occurred (ms)\n";
+
+    if (outcomes.empty())
+    {
+        snapshot << "<none>\n";
+        return;
+    }
+
+    snapshot << std::fixed << std::setprecision(2);
+    for (const auto &event : outcomes)
+    {
+        const auto &position = event.position();
+        snapshot << event.eventId().value() << " | " << event.droneId().value() << " | "
+                 << event.targetId().value() << " | " << position.xMeters() << " | "
+                 << position.yMeters() << " | " << position.zMeters() << " | "
+                 << event.occurredAt().timeSinceUnixEpoch().count() << '\n';
+    }
+}
+
 } // namespace
 
 TerminalView::TerminalView(std::ostream &output) noexcept : output_{output}
@@ -98,13 +122,16 @@ TerminalView::TerminalView(std::ostream &output) noexcept : output_{output}
 }
 
 void TerminalView::render(const console::TargetProjection &targets,
-                          const console::DroneProjection &drones) const
+                          const console::DroneProjection &drones,
+                          const console::OutcomeProjection &outcomes) const
 {
     std::ostringstream snapshot;
     snapshot.imbue(std::locale::classic());
     renderTargets(snapshot, targets);
     snapshot << '\n';
     renderDrones(snapshot, drones);
+    snapshot << '\n';
+    renderOutcomes(snapshot, outcomes);
     snapshot << '\n';
     output_ << snapshot.str();
     output_.flush();

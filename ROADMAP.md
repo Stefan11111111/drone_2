@@ -428,7 +428,7 @@ the note into generic documentation or paste large source listings.
 
 ### 43 — Display the interception outcome
 
-- [ ] **AI prompt:** Complete roadmap step 43 only. Add the explosion-event DataReader to the console
+- [x] **AI prompt:** Complete roadmap step 43 only. Add the explosion-event DataReader to the console
   DDS adapter, correlate outcomes in console core, and render the result in the terminal UI. Cover
   duplicate, unrelated, and valid events at the appropriate boundaries. Add
   `docs/learning/43-console-outcome.md`, explaining event consumption, correlation, and the effect of

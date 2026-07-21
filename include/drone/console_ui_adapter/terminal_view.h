@@ -2,6 +2,7 @@
 #define DRONE_CONSOLE_UI_ADAPTER_TERMINAL_VIEW_H
 
 #include "drone/console_core/drone_projection.h"
+#include "drone/console_core/outcome_projection.h"
 #include "drone/console_core/target_projection.h"
 
 #include <iosfwd>
@@ -14,8 +15,8 @@ class TerminalView final
   public:
     explicit TerminalView(std::ostream &output) noexcept;
 
-    void render(const console::TargetProjection &targets,
-                const console::DroneProjection &drones) const;
+    void render(const console::TargetProjection &targets, const console::DroneProjection &drones,
+                const console::OutcomeProjection &outcomes) const;
 
   private:
     std::ostream &output_;
