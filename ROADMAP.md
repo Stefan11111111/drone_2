@@ -344,7 +344,7 @@ the note into generic documentation or paste large source listings.
 
 ### 34 — Send assignments through DDS
 
-- [ ] **AI prompt:** Complete roadmap step 34 only. Add the assignment DataWriter to the console DDS
+- [x] **AI prompt:** Complete roadmap step 34 only. Add the assignment DataWriter to the console DDS
   adapter and DataReader to the interceptor DDS adapter with the catalog's QoS and safe callback
   handoff. Test the adapter path with a captured interceptor input; do not change interceptor state
   yet. Add `docs/learning/34-assignment-topic.md`, explaining reliable delivery, volatility or

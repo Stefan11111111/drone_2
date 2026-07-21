@@ -124,6 +124,9 @@ target_link_libraries(simulated_vehicle_adapter PUBLIC interceptor_core)
 add_library(
   drone_dds_transport
   src/drone_dds_transport/assignment_mapping.cpp
+  src/drone_dds_transport/assignment_reader.cpp
+  src/drone_dds_transport/assignment_topic.cpp
+  src/drone_dds_transport/assignment_writer.cpp
   src/drone_dds_transport/domain_participant_owner.cpp
   src/drone_dds_transport/drone_state_mapping.cpp
   src/drone_dds_transport/drone_state_reader.cpp
@@ -142,11 +145,17 @@ add_library(observer_dds_adapter src/observer_dds_adapter/target_track_publisher
 target_include_directories(observer_dds_adapter PUBLIC include)
 target_link_libraries(observer_dds_adapter PUBLIC observer_core drone_dds_transport)
 
-add_library(interceptor_dds_adapter src/interceptor_dds_adapter/drone_state_publisher.cpp)
+add_library(
+  interceptor_dds_adapter
+  src/interceptor_dds_adapter/assignment_subscriber.cpp
+  src/interceptor_dds_adapter/drone_state_publisher.cpp)
 target_include_directories(interceptor_dds_adapter PUBLIC include)
 target_link_libraries(interceptor_dds_adapter PUBLIC interceptor_core drone_dds_transport)
 
-add_library(console_dds_adapter src/console_dds_adapter/console_subscriber.cpp)
+add_library(
+  console_dds_adapter
+  src/console_dds_adapter/assignment_publisher.cpp
+  src/console_dds_adapter/console_subscriber.cpp)
 target_include_directories(console_dds_adapter PUBLIC include)
 target_link_libraries(console_dds_adapter PUBLIC console_core drone_dds_transport)
 
@@ -259,6 +268,12 @@ target_link_libraries(
   console_dds_adapter_test
   PRIVATE GTest::gtest_main console_dds_adapter drone_dds_transport drone_dds_types fastdds)
 gtest_discover_tests(console_dds_adapter_test)
+
+add_executable(assignment_dds_adapter_test tests/assignment_dds_adapter_test.cpp)
+target_link_libraries(
+  assignment_dds_adapter_test
+  PRIVATE GTest::gtest_main console_dds_adapter interceptor_dds_adapter)
+gtest_discover_tests(assignment_dds_adapter_test)
 
 add_executable(simulated_radar_adapter_test tests/simulated_radar_adapter_test.cpp)
 target_link_libraries(
