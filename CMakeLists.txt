@@ -206,6 +206,12 @@ add_test(
     ${CMAKE_CURRENT_SOURCE_DIR}/scripts/run-clang-tidy.sh)
 
 add_test(
+  NAME VerificationWorkflow.DemonstrationLauncher
+  COMMAND
+    bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/run_demonstration_script_test.sh
+    ${CMAKE_CURRENT_SOURCE_DIR}/scripts/run-demonstration.sh)
+
+add_test(
   NAME VerificationWorkflow.TopicCatalog
   COMMAND
     ${CMAKE_COMMAND}
