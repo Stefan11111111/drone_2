@@ -29,14 +29,17 @@ TEST(LiveSystemState,
      GivenObserverConsoleAndInterceptorProcesses_WhenEndpointsMatch_ThenBothStatesAreShown)
 {
     const auto domainId = std::to_string(processScenarioDomainId);
-    ChildProcess console{CONSOLE_EXECUTABLE_PATH, {domainId}, ChildOutput::capture};
+    ChildProcess console{CONSOLE_EXECUTABLE_PATH, {"--domain-id", domainId}, ChildOutput::capture};
     ASSERT_TRUE(console.waitForOutput(consoleReadyLog, readinessTimeout))
         << "The console did not create both readers within " << readinessTimeout.count()
         << " ms.\nConsole log:\n"
         << console.capturedOutput();
 
-    ChildProcess observer{OBSERVER_EXECUTABLE_PATH, {domainId, "100"}, ChildOutput::capture};
-    ChildProcess interceptor{INTERCEPTOR_EXECUTABLE_PATH, {domainId}, ChildOutput::capture};
+    ChildProcess observer{OBSERVER_EXECUTABLE_PATH,
+                          {"--domain-id", domainId, "--tick-count", "100"},
+                          ChildOutput::capture};
+    ChildProcess interceptor{
+        INTERCEPTOR_EXECUTABLE_PATH, {"--domain-id", domainId}, ChildOutput::capture};
 
     ASSERT_TRUE(console.waitForOutput(targetDiscoveryLog, discoveryTimeout))
         << "The console did not match the observer.\nConsole log:\n"

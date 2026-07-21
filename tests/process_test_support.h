@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -34,16 +35,20 @@ class ChildProcess final
     [[nodiscard]] bool waitForOutput(std::string_view expected, std::chrono::milliseconds timeout);
     [[nodiscard]] bool waitForOutputOccurrences(std::string_view expected, std::size_t count,
                                                 std::chrono::milliseconds timeout);
+    [[nodiscard]] bool sendSignal(int signal) const noexcept;
+    [[nodiscard]] bool waitForExit(std::chrono::milliseconds timeout) noexcept;
     [[nodiscard]] bool terminateAndWait(std::chrono::milliseconds timeout) noexcept;
+    [[nodiscard]] std::optional<int> exitCode() const noexcept;
     [[nodiscard]] const std::string &capturedOutput() noexcept;
 
   private:
     void drainOutput() noexcept;
-    [[nodiscard]] bool waitForExit(std::chrono::milliseconds timeout) noexcept;
     [[nodiscard]] bool waitForExitBlocking() noexcept;
+    void recordExitStatus(int status) noexcept;
 
     pid_t processId_{-1};
     int outputDescriptor_{-1};
+    std::optional<int> exitCode_;
     std::string capturedOutput_;
 };
 

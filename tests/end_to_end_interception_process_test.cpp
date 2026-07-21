@@ -34,15 +34,18 @@ TEST(CompleteVisionScenario,
 {
     const auto domainId = std::to_string(endToEndDomainId);
     ChildProcess console{
-        CONSOLE_EXECUTABLE_PATH, {domainId, "--auto-pursuit"}, ChildOutput::capture};
+        CONSOLE_EXECUTABLE_PATH, {"--domain-id", domainId, "--auto-pursuit"}, ChildOutput::capture};
     ASSERT_TRUE(console.waitForOutput(consoleReadyLog, readinessTimeout))
         << "The console did not create its readers.\nConsole log:\n"
         << console.capturedOutput();
-    ChildProcess interceptor{INTERCEPTOR_EXECUTABLE_PATH, {domainId}, ChildOutput::capture};
+    ChildProcess interceptor{
+        INTERCEPTOR_EXECUTABLE_PATH, {"--domain-id", domainId}, ChildOutput::capture};
     ASSERT_TRUE(interceptor.waitForOutput(interceptorReadyLog, readinessTimeout))
         << "The interceptor did not publish available state.\nInterceptor log:\n"
         << interceptor.capturedOutput();
-    ChildProcess observer{OBSERVER_EXECUTABLE_PATH, {domainId, "400"}, ChildOutput::capture};
+    ChildProcess observer{OBSERVER_EXECUTABLE_PATH,
+                          {"--domain-id", domainId, "--tick-count", "400"},
+                          ChildOutput::capture};
 
     ASSERT_TRUE(console.waitForOutput(targetRow, stateAndActionTimeout))
         << "The console did not render live target state.\nConsole log:\n"

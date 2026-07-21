@@ -53,12 +53,13 @@ TEST(LateJoinerDroneState,
      GivenConsoleReadersExistFirst_WhenInterceptorStarts_ThenLiveAvailableStateIsRendered)
 {
     const auto domainId = std::to_string(consoleFirstDomainId);
-    ChildProcess console{CONSOLE_EXECUTABLE_PATH, {domainId}, ChildOutput::capture};
+    ChildProcess console{CONSOLE_EXECUTABLE_PATH, {"--domain-id", domainId}, ChildOutput::capture};
     ASSERT_TRUE(console.waitForOutput(consoleReadyLog, readinessTimeout))
         << "The console did not create its readers before the interceptor was launched.\nConsole "
            "log:\n"
         << console.capturedOutput();
-    ChildProcess interceptor{INTERCEPTOR_EXECUTABLE_PATH, {domainId}, ChildOutput::capture};
+    ChildProcess interceptor{
+        INTERCEPTOR_EXECUTABLE_PATH, {"--domain-id", domainId}, ChildOutput::capture};
 
     expectAvailableState(console, interceptor);
     expectCleanShutdown(console, interceptor);
@@ -68,11 +69,12 @@ TEST(LateJoinerDroneState,
      GivenInterceptorWritesFirst_WhenConsoleStarts_ThenRetainedAvailableStateIsRendered)
 {
     const auto domainId = std::to_string(interceptorFirstDomainId);
-    ChildProcess interceptor{INTERCEPTOR_EXECUTABLE_PATH, {domainId}, ChildOutput::capture};
+    ChildProcess interceptor{
+        INTERCEPTOR_EXECUTABLE_PATH, {"--domain-id", domainId}, ChildOutput::capture};
     ASSERT_TRUE(interceptor.waitForOutput(interceptorPublishedLog, readinessTimeout))
         << "The interceptor did not publish before the console was launched.\nInterceptor log:\n"
         << interceptor.capturedOutput();
-    ChildProcess console{CONSOLE_EXECUTABLE_PATH, {domainId}, ChildOutput::capture};
+    ChildProcess console{CONSOLE_EXECUTABLE_PATH, {"--domain-id", domainId}, ChildOutput::capture};
     ASSERT_TRUE(console.waitForOutput(consoleReadyLog, readinessTimeout))
         << "The late console did not create its readers.\nConsole log:\n"
         << console.capturedOutput();

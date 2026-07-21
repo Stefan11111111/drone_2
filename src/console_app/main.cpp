@@ -1,3 +1,5 @@
+#include "drone/application_support/process_configuration.h"
+#include "drone/application_support/shutdown_monitor.h"
 #include "drone/console_core/assignment_use_case.h"
 #include "drone/console_core/drone_projection.h"
 #include "drone/console_core/interception_command_use_case.h"
@@ -11,33 +13,20 @@
 #include "drone/domain/drone_id.h"
 #include "drone/domain/target_id.h"
 
-#include <charconv>
 #include <chrono>
 #include <cstddef>
-#include <cstdint>
 #include <exception>
 #include <iostream>
 #include <span>
-#include <stdexcept>
 #include <string>
 #include <string_view>
-#include <system_error>
 
 namespace
 {
 
 using namespace std::chrono_literals;
 
-constexpr std::uint32_t defaultDomainId{0};
-constexpr std::uint64_t maximumDefaultPortDomainId{232};
-constexpr auto receiveTimeout{50ms};
-constexpr std::string_view automatedPursuitArgument{"--auto-pursuit"};
-
-struct Configuration final
-{
-    std::uint32_t domainId{defaultDomainId};
-    bool automatePursuit{false};
-};
+constexpr auto defaultConsoleTickInterval{50ms};
 
 struct AutomatedPursuitState final
 {
@@ -52,41 +41,34 @@ struct ConsoleModel final
     drone::console::OutcomeProjection outcomes{targets, drones};
 };
 
-[[nodiscard]] Configuration parseConfiguration(const std::span<const char *const> arguments)
+struct ParticipantNames final
 {
-    if (arguments.size() > 3)
-    {
-        throw std::invalid_argument{"usage: console [domain-id [--auto-pursuit]]"};
-    }
+    std::string stateReaders;
+    std::string explosionReader;
+    std::string assignmentWriter;
+    std::string commandWriter;
+};
 
-    Configuration configuration;
-    if (arguments.size() == 1)
-    {
-        return configuration;
-    }
+[[nodiscard]] drone::application::ProcessConfiguration
+parseConfiguration(const std::span<const char *const> arguments)
+{
+    return drone::application::parseProcessConfiguration(
+        arguments, {.executableName = "console",
+                    .defaultParticipantName = "drone_console",
+                    .defaultTickInterval = defaultConsoleTickInterval,
+                    .acceptsAutomatedPursuit = true});
+}
 
-    std::uint64_t domainId{};
-    const std::string_view text{arguments[1]};
-    const auto [parsedEnd, error] = std::from_chars(text.begin(), text.end(), domainId);
-    if (error != std::errc{} || parsedEnd != text.end())
-    {
-        throw std::invalid_argument{"domain-id must be an unsigned integer"};
-    }
-    if (domainId > maximumDefaultPortDomainId)
-    {
-        throw std::invalid_argument{"domain-id must not exceed 232"};
-    }
-
-    configuration.domainId = static_cast<std::uint32_t>(domainId);
-    if (arguments.size() == 3)
-    {
-        if (arguments[2] != automatedPursuitArgument)
-        {
-            throw std::invalid_argument{"the only supported console action mode is --auto-pursuit"};
-        }
-        configuration.automatePursuit = true;
-    }
-    return configuration;
+[[nodiscard]] ParticipantNames participantNames(const std::string_view configuredName)
+{
+    return ParticipantNames{
+        .stateReaders = drone::application::composeParticipantName(configuredName, {}),
+        .explosionReader =
+            drone::application::composeParticipantName(configuredName, "explosion-reader"),
+        .assignmentWriter =
+            drone::application::composeParticipantName(configuredName, "assignment-writer"),
+        .commandWriter =
+            drone::application::composeParticipantName(configuredName, "command-writer")};
 }
 
 [[nodiscard]] std::string_view
@@ -133,7 +115,7 @@ void reportOutcomeResult(const drone::console_dds::ExplosionEventReceiveResult &
 void receiveTarget(drone::console_dds::ConsoleSubscriber &subscriber,
                    const drone::console_ui::TerminalView &view, ConsoleModel &model)
 {
-    const auto received = subscriber.receiveNextTarget(receiveTimeout);
+    const auto received = subscriber.receiveNextTarget(0ms);
     if (received.has_value())
     {
         view.render(model.targets, model.drones, model.outcomes);
@@ -145,7 +127,7 @@ void receiveTarget(drone::console_dds::ConsoleSubscriber &subscriber,
 void receiveDrone(drone::console_dds::ConsoleSubscriber &subscriber,
                   const drone::console_ui::TerminalView &view, ConsoleModel &model)
 {
-    const auto received = subscriber.receiveNextDrone(receiveTimeout);
+    const auto received = subscriber.receiveNextDrone(0ms);
     if (received.has_value())
     {
         view.render(model.targets, model.drones, model.outcomes);
@@ -157,7 +139,7 @@ void receiveDrone(drone::console_dds::ConsoleSubscriber &subscriber,
 void receiveOutcome(drone::console_dds::ExplosionEventSubscriber &subscriber,
                     const drone::console_ui::TerminalView &view, ConsoleModel &model)
 {
-    const auto received = subscriber.receiveNext(receiveTimeout);
+    const auto received = subscriber.receiveNext(0ms);
     if (received.has_value())
     {
         view.render(model.targets, model.drones, model.outcomes);
@@ -188,24 +170,27 @@ void automatePursuit(const bool assignmentReaderMatched, const bool commandReade
     }
 }
 
-void run(const Configuration &configuration)
+void run(const drone::application::ProcessConfiguration &configuration)
 {
+    const auto names = participantNames(configuration.participantName);
     ConsoleModel model;
-    drone::console_dds::ConsoleSubscriber subscriber{configuration.domainId, "drone_console",
+    drone::console_dds::ConsoleSubscriber subscriber{configuration.domainId, names.stateReaders,
                                                      model.targets, model.drones};
     drone::console_dds::ExplosionEventSubscriber outcomeSubscriber{
-        configuration.domainId, "drone_console_explosion_reader", model.outcomes};
+        configuration.domainId, names.explosionReader, model.outcomes};
     drone::console_dds::AssignmentPublisher assignmentPublisher{configuration.domainId,
-                                                                "drone_console_assignment_writer"};
-    drone::console_dds::InterceptionCommandPublisher commandPublisher{
-        configuration.domainId, "drone_console_command_writer"};
+                                                                names.assignmentWriter};
+    drone::console_dds::InterceptionCommandPublisher commandPublisher{configuration.domainId,
+                                                                      names.commandWriter};
     drone::console::AssignmentUseCase assignment{model.targets, model.drones, assignmentPublisher};
     drone::console::InterceptionCommandUseCase command{model.drones, commandPublisher};
     const drone::console_ui::TerminalView view{std::cout};
 
-    std::cout << "console: readers ready for targets and drones in DDS domain "
-              << configuration.domainId << '\n';
+    std::cout << "console: readers ready for targets and drones; participant '"
+              << configuration.participantName << "' in DDS domain " << configuration.domainId
+              << "; poll interval " << configuration.tickInterval.count() << " ms\n";
     view.render(model.targets, model.drones, model.outcomes);
+    std::cout << std::flush;
 
     bool targetWriterMatched{false};
     bool droneWriterMatched{false};
@@ -213,7 +198,7 @@ void run(const Configuration &configuration)
     bool assignmentReaderMatched{false};
     bool commandReaderMatched{false};
     AutomatedPursuitState automation;
-    while (true)
+    while (!drone::application::ShutdownMonitor::requested())
     {
         if (!targetWriterMatched && subscriber.waitForTargetWriterMatch(0ms))
         {
@@ -248,6 +233,7 @@ void run(const Configuration &configuration)
             automatePursuit(assignmentReaderMatched, commandReaderMatched, assignment, command,
                             automation);
         }
+        static_cast<void>(drone::application::ShutdownMonitor::waitFor(configuration.tickInterval));
     }
 }
 
@@ -257,8 +243,11 @@ int main(const int argumentCount, const char *const arguments[])
 {
     try
     {
-        run(parseConfiguration(
-            std::span<const char *const>{arguments, static_cast<std::size_t>(argumentCount)}));
+        const auto configuration = parseConfiguration(
+            std::span<const char *const>{arguments, static_cast<std::size_t>(argumentCount)});
+        const drone::application::ShutdownMonitor shutdownMonitor;
+        run(configuration);
+        std::cout << "console: shutdown complete\n" << std::flush;
         return 0;
     }
     catch (const std::exception &error)

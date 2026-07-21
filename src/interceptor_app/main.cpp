@@ -1,3 +1,5 @@
+#include "drone/application_support/process_configuration.h"
+#include "drone/application_support/shutdown_monitor.h"
 #include "drone/domain/drone_id.h"
 #include "drone/domain/drone_state.h"
 #include "drone/domain/position.h"
@@ -10,59 +12,82 @@
 #include "drone/interceptor_dds_adapter/target_track_subscriber.h"
 #include "drone/simulated_vehicle_adapter/simulated_vehicle.h"
 
-#include <charconv>
 #include <chrono>
 #include <cstddef>
-#include <cstdint>
 #include <exception>
 #include <iomanip>
 #include <iostream>
 #include <locale>
 #include <span>
 #include <stdexcept>
+#include <string>
 #include <string_view>
-#include <system_error>
-#include <thread>
 
 namespace
 {
 
 using namespace std::chrono_literals;
 
-constexpr std::uint32_t defaultDomainId{0};
-constexpr std::uint64_t maximumDefaultPortDomainId{232};
-constexpr auto controlInterval{100ms};
+constexpr auto defaultControlInterval{100ms};
 
-[[nodiscard]] std::uint32_t parseDomainId(const std::span<const char *const> arguments)
+struct ParticipantNames final
 {
-    if (arguments.size() > 2)
-    {
-        throw std::invalid_argument{"usage: interceptor [domain-id]"};
-    }
-    if (arguments.size() == 1)
-    {
-        return defaultDomainId;
-    }
+    std::string stateWriter;
+    std::string explosionWriter;
+    std::string assignmentReader;
+    std::string commandReader;
+    std::string targetReader;
+};
 
-    std::uint64_t domainId{};
-    const std::string_view text{arguments[1]};
-    const auto [parsedEnd, error] = std::from_chars(text.begin(), text.end(), domainId);
-    if (error != std::errc{} || parsedEnd != text.end())
-    {
-        throw std::invalid_argument{"domain-id must be an unsigned integer"};
-    }
-    if (domainId > maximumDefaultPortDomainId)
-    {
-        throw std::invalid_argument{"domain-id must not exceed 232"};
-    }
-    return static_cast<std::uint32_t>(domainId);
+[[nodiscard]] drone::application::ProcessConfiguration
+parseConfiguration(const std::span<const char *const> arguments)
+{
+    return drone::application::parseProcessConfiguration(
+        arguments, {.executableName = "interceptor",
+                    .defaultParticipantName = "drone_interceptor_1",
+                    .defaultTickInterval = defaultControlInterval});
 }
 
-void run(const std::uint32_t domainId)
+[[nodiscard]] ParticipantNames participantNames(const std::string_view configuredName)
 {
-    drone::interceptor_dds::DroneStatePublisher statePublisher{domainId, "drone_interceptor_1"};
-    drone::interceptor_dds::ExplosionEventPublisher eventPublisher{
-        domainId, "drone_interceptor_explosion_writer"};
+    return ParticipantNames{
+        .stateWriter = drone::application::composeParticipantName(configuredName, {}),
+        .explosionWriter =
+            drone::application::composeParticipantName(configuredName, "explosion-writer"),
+        .assignmentReader =
+            drone::application::composeParticipantName(configuredName, "assignment-reader"),
+        .commandReader =
+            drone::application::composeParticipantName(configuredName, "command-reader"),
+        .targetReader =
+            drone::application::composeParticipantName(configuredName, "target-reader")};
+}
+
+void reportMovement(const drone::interceptor::InterceptorStateMachine &stateMachine)
+{
+    const auto &stateAfterMovement = stateMachine.state();
+    const auto &movementTarget = stateMachine.latestTargetTrack();
+    if (!stateAfterMovement.has_value() || !movementTarget.has_value())
+    {
+        throw std::logic_error{"A completed pursuit tick has no state or target"};
+    }
+    const auto &position = stateAfterMovement->position();
+    const auto &targetPosition = movementTarget->position();
+    std::cout.imbue(std::locale::classic());
+    std::cout << std::fixed << std::setprecision(6) << "interceptor: pursuit position "
+              << position.xMeters() << ' ' << position.yMeters() << ' ' << position.zMeters()
+              << " target " << targetPosition.xMeters() << ' ' << targetPosition.yMeters() << ' '
+              << targetPosition.zMeters() << " target-time "
+              << movementTarget->measuredAt().timeSinceUnixEpoch().count() << '\n'
+              << std::flush;
+}
+
+void run(const drone::application::ProcessConfiguration &configuration)
+{
+    const auto names = participantNames(configuration.participantName);
+    drone::interceptor_dds::DroneStatePublisher statePublisher{configuration.domainId,
+                                                               names.stateWriter};
+    drone::interceptor_dds::ExplosionEventPublisher eventPublisher{configuration.domainId,
+                                                                   names.explosionWriter};
     drone::simulated_vehicle::SimulatedVehicle vehicle{
         {.initialPosition = drone::domain::Position{0.0, 0.0, 0.0},
          .startsAt = drone::domain::Timestamp{0ms},
@@ -75,18 +100,19 @@ void run(const std::uint32_t domainId)
         statePublisher,
         eventPublisher};
     drone::interceptor_dds::AssignmentSubscriber assignmentSubscriber{
-        domainId, "drone_interceptor_assignment_reader", stateMachine};
+        configuration.domainId, names.assignmentReader, stateMachine};
     drone::interceptor_dds::InterceptionCommandSubscriber commandSubscriber{
-        domainId, "drone_interceptor_command_reader", stateMachine};
+        configuration.domainId, names.commandReader, stateMachine};
     drone::interceptor_dds::TargetTrackSubscriber targetSubscriber{
-        domainId, "drone_interceptor_target_reader", stateMachine};
+        configuration.domainId, names.targetReader, stateMachine};
 
     stateMachine.start();
-    std::cout << "interceptor: published available state for drone 1 in DDS domain " << domainId
-              << '\n'
+    std::cout << "interceptor: published available state for drone 1; participant '"
+              << configuration.participantName << "' in DDS domain " << configuration.domainId
+              << "; control interval " << configuration.tickInterval.count() << " ms\n"
               << std::flush;
 
-    while (true)
+    while (!drone::application::ShutdownMonitor::requested())
     {
         const auto &stateAtTickStart = stateMachine.state();
         if (!stateAtTickStart.has_value())
@@ -95,7 +121,7 @@ void run(const std::uint32_t domainId)
         }
         if (stateAtTickStart->status() != drone::domain::DroneStatus::intercepting)
         {
-            vehicle.advanceTime(controlInterval);
+            vehicle.advanceTime(configuration.tickInterval);
         }
 
         const auto assignment = assignmentSubscriber.receiveNext(0ms);
@@ -127,27 +153,13 @@ void run(const std::uint32_t domainId)
             std::cout << "interceptor: accepted interception start\n" << std::flush;
         }
 
-        if (stateMachine.tick(controlInterval) == drone::interceptor::InterceptionTickResult::moved)
+        if (stateMachine.tick(configuration.tickInterval) ==
+            drone::interceptor::InterceptionTickResult::moved)
         {
-            const auto &stateAfterMovement = stateMachine.state();
-            const auto &movementTarget = stateMachine.latestTargetTrack();
-            if (!stateAfterMovement.has_value() || !movementTarget.has_value())
-            {
-                throw std::logic_error{"A completed pursuit tick has no state or target"};
-            }
-            const auto &position = stateAfterMovement->position();
-            const auto &targetPosition = movementTarget->position();
-            std::cout.imbue(std::locale::classic());
-            std::cout << std::fixed << std::setprecision(6) << "interceptor: pursuit position "
-                      << position.xMeters() << ' ' << position.yMeters() << ' '
-                      << position.zMeters() << " target " << targetPosition.xMeters() << ' '
-                      << targetPosition.yMeters() << ' ' << targetPosition.zMeters()
-                      << " target-time "
-                      << movementTarget->measuredAt().timeSinceUnixEpoch().count() << '\n'
-                      << std::flush;
+            reportMovement(stateMachine);
         }
 
-        std::this_thread::sleep_for(controlInterval);
+        static_cast<void>(drone::application::ShutdownMonitor::waitFor(configuration.tickInterval));
     }
 }
 
@@ -157,8 +169,11 @@ int main(const int argumentCount, const char *const arguments[])
 {
     try
     {
-        run(parseDomainId(
-            std::span<const char *const>{arguments, static_cast<std::size_t>(argumentCount)}));
+        const auto configuration = parseConfiguration(
+            std::span<const char *const>{arguments, static_cast<std::size_t>(argumentCount)});
+        const drone::application::ShutdownMonitor shutdownMonitor;
+        run(configuration);
+        std::cout << "interceptor: shutdown complete\n" << std::flush;
         return 0;
     }
     catch (const std::exception &error)

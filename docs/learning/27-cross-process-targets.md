@@ -40,8 +40,9 @@ cmake --build --preset development --target observer_console_process_test
 ctest --preset development -R '^CrossProcessTargets\.' -V
 ```
 
-For a manual version, start `./build/development/console 0` in one terminal and then run
-`./build/development/observer 0 20` in another. The console first reports its empty projection, then
+For a manual version, start `./build/development/console --domain-id 0` in one terminal and then run
+`./build/development/observer --domain-id 0 --tick-count 20` in another. The console first reports
+its empty projection, then
 its DDS writer match, followed by changing positions for target 1.
 
 ## Takeaway

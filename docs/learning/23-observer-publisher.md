@@ -41,7 +41,8 @@ ctest --preset development -R '^ObserverPublisher\.' -V
 ```
 
 The verbose output shows the separate observer publishing updates. To experiment manually with a
-finite publisher in DDS domain 0, run `./build/development/observer 0 20` while another target-track
+finite publisher in DDS domain 0, run
+`./build/development/observer --domain-id 0 --tick-count 20` while another target-track
 reader is active. Changing the domain ID on only one side prevents discovery and the process test's
 match wait reports a bounded, specific failure.
 
