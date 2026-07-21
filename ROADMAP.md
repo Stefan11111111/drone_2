@@ -252,7 +252,7 @@ the note into generic documentation or paste large source listings.
 
 ### 24 — Project target state in console core
 
-- [ ] **AI prompt:** Complete roadmap step 24 only. Create `console_core` support for accepting
+- [x] **AI prompt:** Complete roadmap step 24 only. Create `console_core` support for accepting
   target updates and maintaining the latest target state by identifier. Define and test stale-update
   and duplicate behavior without adding DDS or UI code. Add `docs/learning/24-console-projection.md`,
   explaining how a subscriber builds an application-specific view from received samples.
