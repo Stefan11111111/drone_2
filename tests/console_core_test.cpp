@@ -1,13 +1,17 @@
 #include "drone/console_core/assignment_use_case.h"
 #include "drone/console_core/drone_projection.h"
+#include "drone/console_core/interception_command_use_case.h"
 #include "drone/console_core/target_projection.h"
 
 #include "drone/console_core/assignment_output_port.h"
 #include "drone/console_core/drone_state_input_port.h"
+#include "drone/console_core/interception_command_output_port.h"
 #include "drone/console_core/target_track_input_port.h"
 #include "drone/domain/assignment.h"
 #include "drone/domain/drone_id.h"
 #include "drone/domain/drone_state.h"
+#include "drone/domain/interception_command.h"
+#include "drone/domain/interception_command_id.h"
 #include "drone/domain/position.h"
 #include "drone/domain/target_id.h"
 #include "drone/domain/target_track.h"
@@ -28,6 +32,9 @@ using drone::console::AssignmentUseCase;
 using drone::console::DroneProjection;
 using drone::console::DroneStateInputPort;
 using drone::console::DroneUpdateResult;
+using drone::console::InterceptionCommandOutputPort;
+using drone::console::InterceptionCommandUseCase;
+using drone::console::StartInterceptionResult;
 using drone::console::TargetProjection;
 using drone::console::TargetTrackInputPort;
 using drone::console::TargetUpdateResult;
@@ -35,6 +42,8 @@ using drone::domain::Assignment;
 using drone::domain::DroneId;
 using drone::domain::DroneState;
 using drone::domain::DroneStatus;
+using drone::domain::InterceptionCommand;
+using drone::domain::InterceptionCommandId;
 using drone::domain::Position;
 using drone::domain::TargetId;
 using drone::domain::TargetTrack;
@@ -50,6 +59,17 @@ class CapturingAssignmentOutput final : public AssignmentOutputPort
     }
 
     std::vector<Assignment> assignments;
+};
+
+class CapturingCommandOutput final : public InterceptionCommandOutputPort
+{
+  public:
+    void publish(const InterceptionCommand &command) override
+    {
+        commands.push_back(command);
+    }
+
+    std::vector<InterceptionCommand> commands;
 };
 
 struct AssignmentFixture
@@ -215,6 +235,60 @@ TEST(ConsoleCore, GivenAnAvailableDroneAndKnownTarget_WhenAssigned_ThenOneAssign
 
     EXPECT_EQ(fixture.useCase.assign(DroneId{7}, TargetId{42}), AssignmentResult::assigned);
     EXPECT_EQ(fixture.output.assignments, (std::vector{Assignment{DroneId{7}, TargetId{42}}}));
+}
+
+TEST(ConsoleCore, GivenAnUnknownDrone_WhenStartIsRequested_ThenNoCommandIsEmitted)
+{
+    DroneProjection drones;
+    CapturingCommandOutput output;
+    InterceptionCommandUseCase useCase{drones, output};
+
+    EXPECT_EQ(useCase.start(DroneId{7}), StartInterceptionResult::unknownDrone);
+    EXPECT_TRUE(output.commands.empty());
+}
+
+TEST(ConsoleCore, GivenAnAvailableDrone_WhenStartIsRequested_ThenNoCommandIsEmitted)
+{
+    DroneProjection drones;
+    CapturingCommandOutput output;
+    InterceptionCommandUseCase useCase{drones, output};
+    ASSERT_EQ(
+        drones.onDroneState(DroneState{DroneId{7}, Position{0.0, 0.0, 0.0}, Timestamp{1'000ms},
+                                       DroneStatus::available, std::nullopt}),
+        DroneUpdateResult::added);
+
+    EXPECT_EQ(useCase.start(DroneId{7}), StartInterceptionResult::droneNotAssigned);
+    EXPECT_TRUE(output.commands.empty());
+}
+
+TEST(ConsoleCore, GivenAnAssignedDrone_WhenStartIsRequested_ThenOneCorrelatedCommandIsEmitted)
+{
+    DroneProjection drones;
+    CapturingCommandOutput output;
+    InterceptionCommandUseCase useCase{drones, output};
+    ASSERT_EQ(
+        drones.onDroneState(DroneState{DroneId{7}, Position{0.0, 0.0, 0.0}, Timestamp{1'000ms},
+                                       DroneStatus::assigned, TargetId{42}}),
+        DroneUpdateResult::added);
+
+    EXPECT_EQ(useCase.start(DroneId{7}), StartInterceptionResult::started);
+    EXPECT_EQ(output.commands, (std::vector{InterceptionCommand{InterceptionCommandId{1},
+                                                                DroneId{7}, TargetId{42}}}));
+}
+
+TEST(ConsoleCore, GivenAStartedDrone_WhenStartIsRequestedAgain_ThenNoSecondCommandIsEmitted)
+{
+    DroneProjection drones;
+    CapturingCommandOutput output;
+    InterceptionCommandUseCase useCase{drones, output};
+    ASSERT_EQ(
+        drones.onDroneState(DroneState{DroneId{7}, Position{0.0, 0.0, 0.0}, Timestamp{1'000ms},
+                                       DroneStatus::assigned, TargetId{42}}),
+        DroneUpdateResult::added);
+    ASSERT_EQ(useCase.start(DroneId{7}), StartInterceptionResult::started);
+
+    EXPECT_EQ(useCase.start(DroneId{7}), StartInterceptionResult::duplicate);
+    EXPECT_EQ(output.commands.size(), 1U);
 }
 
 } // namespace

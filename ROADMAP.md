@@ -362,7 +362,7 @@ the note into generic documentation or paste large source listings.
 
 ### 36 — Accept a start command from the operator
 
-- [ ] **AI prompt:** Complete roadmap step 36 only. Add console-core validation and a terminal UI
+- [x] **AI prompt:** Complete roadmap step 36 only. Add console-core validation and a terminal UI
   action for commanding an assigned drone to begin interception. Keep parsing replaceable and do
   not add its DDS endpoint yet. Add `docs/learning/36-operator-command.md`, explaining the boundary
   between human interaction, application intent, and DDS transport. Acceptance: tests show that

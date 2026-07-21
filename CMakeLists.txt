@@ -105,11 +105,15 @@ add_library(
   console_core
   src/console_core/assignment_use_case.cpp
   src/console_core/drone_projection.cpp
+  src/console_core/interception_command_use_case.cpp
   src/console_core/target_projection.cpp)
 target_include_directories(console_core PUBLIC include)
 target_link_libraries(console_core PUBLIC drone_domain)
 
-add_library(console_ui_adapter src/console_ui_adapter/terminal_view.cpp)
+add_library(
+  console_ui_adapter
+  src/console_ui_adapter/terminal_action.cpp
+  src/console_ui_adapter/terminal_view.cpp)
 target_include_directories(console_ui_adapter PUBLIC include)
 target_link_libraries(console_ui_adapter PUBLIC console_core)
 
