@@ -298,7 +298,7 @@ the note into generic documentation or paste large source listings.
 
 ### 29 — Simulate vehicle position and motion
 
-- [ ] **AI prompt:** Complete roadmap step 29 only. Implement `simulated_vehicle_adapter` for
+- [x] **AI prompt:** Complete roadmap step 29 only. Implement `simulated_vehicle_adapter` for
   deterministic position and bounded time-step movement through interceptor-core ports. Do not add
   target-following decisions or explosion behavior yet. Add
   `docs/learning/29-simulated-vehicle.md`, explaining how the same core could later drive physical

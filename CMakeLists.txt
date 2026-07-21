@@ -113,6 +113,10 @@ add_library(simulated_radar_adapter src/simulated_radar_adapter/simulated_radar.
 target_include_directories(simulated_radar_adapter PUBLIC include)
 target_link_libraries(simulated_radar_adapter PUBLIC observer_core)
 
+add_library(simulated_vehicle_adapter src/simulated_vehicle_adapter/simulated_vehicle.cpp)
+target_include_directories(simulated_vehicle_adapter PUBLIC include)
+target_link_libraries(simulated_vehicle_adapter PUBLIC interceptor_core)
+
 add_library(
   drone_dds_transport
   src/drone_dds_transport/assignment_mapping.cpp
@@ -245,6 +249,11 @@ add_executable(simulated_radar_adapter_test tests/simulated_radar_adapter_test.c
 target_link_libraries(
   simulated_radar_adapter_test PRIVATE GTest::gtest_main simulated_radar_adapter)
 gtest_discover_tests(simulated_radar_adapter_test)
+
+add_executable(simulated_vehicle_adapter_test tests/simulated_vehicle_adapter_test.cpp)
+target_link_libraries(
+  simulated_vehicle_adapter_test PRIVATE GTest::gtest_main simulated_vehicle_adapter)
+gtest_discover_tests(simulated_vehicle_adapter_test)
 
 add_library(process_test_support tests/process_test_support.cpp)
 target_include_directories(process_test_support PUBLIC tests)
