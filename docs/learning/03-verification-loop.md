@@ -10,8 +10,9 @@ an earlier lesson.
 ## In this project
 
 `.clang-format` and `scripts/format.sh` define and check one C++ format. `.clang-tidy` and
-`scripts/run-clang-tidy.sh` analyze the repository's handwritten C++ using the compilation database
-exported by CMake. `CMakeLists.txt` finds the system GoogleTest 1.17.x package, and
+`scripts/run-clang-tidy.sh` analyze changed handwritten C++ translation units using the compilation
+database exported by CMake. Pass `--all` for an intentional full-project audit. `CMakeLists.txt`
+finds the system GoogleTest 1.17.x package, and
 `tests/verification_workflow_test.cpp` supplies one discovered sample test. `AGENTS.md` records the
 order every later roadmap step follows. Because there are no C++ module units, CMake's automatic
 module scan is disabled so its GCC compilation commands remain usable by clang-tidy 21. None of

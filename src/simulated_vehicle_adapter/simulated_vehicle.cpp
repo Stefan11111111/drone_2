@@ -74,4 +74,10 @@ void SimulatedVehicle::moveToward(const domain::Position &destination,
     measuredAt_ = domain::Timestamp{measuredAt_.timeSinceUnixEpoch() + timeStep};
 }
 
+void SimulatedVehicle::advanceTime(const domain::Timestamp::Duration timeStep)
+{
+    validateTimeStep(timeStep);
+    measuredAt_ = domain::Timestamp{measuredAt_.timeSinceUnixEpoch() + timeStep};
+}
+
 } // namespace drone::simulated_vehicle

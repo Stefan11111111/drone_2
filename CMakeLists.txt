@@ -103,12 +103,17 @@ target_link_libraries(interceptor_core PUBLIC drone_domain)
 
 add_library(
   console_core
+  src/console_core/assignment_use_case.cpp
   src/console_core/drone_projection.cpp
+  src/console_core/interception_command_use_case.cpp
   src/console_core/target_projection.cpp)
 target_include_directories(console_core PUBLIC include)
 target_link_libraries(console_core PUBLIC drone_domain)
 
-add_library(console_ui_adapter src/console_ui_adapter/terminal_view.cpp)
+add_library(
+  console_ui_adapter
+  src/console_ui_adapter/terminal_action.cpp
+  src/console_ui_adapter/terminal_view.cpp)
 target_include_directories(console_ui_adapter PUBLIC include)
 target_link_libraries(console_ui_adapter PUBLIC console_core)
 
@@ -123,6 +128,9 @@ target_link_libraries(simulated_vehicle_adapter PUBLIC interceptor_core)
 add_library(
   drone_dds_transport
   src/drone_dds_transport/assignment_mapping.cpp
+  src/drone_dds_transport/assignment_reader.cpp
+  src/drone_dds_transport/assignment_topic.cpp
+  src/drone_dds_transport/assignment_writer.cpp
   src/drone_dds_transport/domain_participant_owner.cpp
   src/drone_dds_transport/drone_state_mapping.cpp
   src/drone_dds_transport/drone_state_reader.cpp
@@ -130,6 +138,9 @@ add_library(
   src/drone_dds_transport/drone_state_writer.cpp
   src/drone_dds_transport/explosion_event_mapping.cpp
   src/drone_dds_transport/interception_command_mapping.cpp
+  src/drone_dds_transport/interception_command_reader.cpp
+  src/drone_dds_transport/interception_command_topic.cpp
+  src/drone_dds_transport/interception_command_writer.cpp
   src/drone_dds_transport/target_track_reader.cpp
   src/drone_dds_transport/target_track_mapping.cpp
   src/drone_dds_transport/target_track_topic.cpp
@@ -141,11 +152,20 @@ add_library(observer_dds_adapter src/observer_dds_adapter/target_track_publisher
 target_include_directories(observer_dds_adapter PUBLIC include)
 target_link_libraries(observer_dds_adapter PUBLIC observer_core drone_dds_transport)
 
-add_library(interceptor_dds_adapter src/interceptor_dds_adapter/drone_state_publisher.cpp)
+add_library(
+  interceptor_dds_adapter
+  src/interceptor_dds_adapter/assignment_subscriber.cpp
+  src/interceptor_dds_adapter/drone_state_publisher.cpp
+  src/interceptor_dds_adapter/interception_command_subscriber.cpp
+  src/interceptor_dds_adapter/target_track_subscriber.cpp)
 target_include_directories(interceptor_dds_adapter PUBLIC include)
 target_link_libraries(interceptor_dds_adapter PUBLIC interceptor_core drone_dds_transport)
 
-add_library(console_dds_adapter src/console_dds_adapter/console_subscriber.cpp)
+add_library(
+  console_dds_adapter
+  src/console_dds_adapter/assignment_publisher.cpp
+  src/console_dds_adapter/console_subscriber.cpp
+  src/console_dds_adapter/interception_command_publisher.cpp)
 target_include_directories(console_dds_adapter PUBLIC include)
 target_link_libraries(console_dds_adapter PUBLIC console_core drone_dds_transport)
 
@@ -164,6 +184,12 @@ target_link_libraries(
 add_executable(verification_workflow_test tests/verification_workflow_test.cpp)
 target_link_libraries(verification_workflow_test PRIVATE GTest::gtest_main)
 gtest_discover_tests(verification_workflow_test)
+
+add_test(
+  NAME VerificationWorkflow.ClangTidyChangedFiles
+  COMMAND
+    bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/run_clang_tidy_script_test.sh
+    ${CMAKE_CURRENT_SOURCE_DIR}/scripts/run-clang-tidy.sh)
 
 add_test(
   NAME VerificationWorkflow.TopicCatalog
@@ -259,6 +285,25 @@ target_link_libraries(
   PRIVATE GTest::gtest_main console_dds_adapter drone_dds_transport drone_dds_types fastdds)
 gtest_discover_tests(console_dds_adapter_test)
 
+add_executable(assignment_dds_adapter_test tests/assignment_dds_adapter_test.cpp)
+target_link_libraries(
+  assignment_dds_adapter_test
+  PRIVATE GTest::gtest_main console_dds_adapter interceptor_dds_adapter)
+gtest_discover_tests(assignment_dds_adapter_test)
+
+add_executable(
+  interception_command_dds_adapter_test tests/interception_command_dds_adapter_test.cpp)
+target_link_libraries(
+  interception_command_dds_adapter_test
+  PRIVATE GTest::gtest_main console_dds_adapter interceptor_dds_adapter)
+gtest_discover_tests(interception_command_dds_adapter_test)
+
+add_executable(interceptor_target_dds_adapter_test tests/interceptor_target_dds_adapter_test.cpp)
+target_link_libraries(
+  interceptor_target_dds_adapter_test
+  PRIVATE GTest::gtest_main interceptor_dds_adapter drone_dds_transport)
+gtest_discover_tests(interceptor_target_dds_adapter_test)
+
 add_executable(simulated_radar_adapter_test tests/simulated_radar_adapter_test.cpp)
 target_link_libraries(
   simulated_radar_adapter_test PRIVATE GTest::gtest_main simulated_radar_adapter)
@@ -300,6 +345,17 @@ target_link_libraries(
   live_system_state_process_test PRIVATE GTest::gtest_main process_test_support)
 add_dependencies(live_system_state_process_test observer console interceptor)
 gtest_discover_tests(live_system_state_process_test PROPERTIES TIMEOUT 15)
+
+add_executable(moving_target_pursuit_process_test tests/moving_target_pursuit_process_test.cpp)
+target_compile_definitions(
+  moving_target_pursuit_process_test
+  PRIVATE OBSERVER_EXECUTABLE_PATH="$<TARGET_FILE:observer>"
+          CONSOLE_EXECUTABLE_PATH="$<TARGET_FILE:console>"
+          INTERCEPTOR_EXECUTABLE_PATH="$<TARGET_FILE:interceptor>")
+target_link_libraries(
+  moving_target_pursuit_process_test PRIVATE GTest::gtest_main process_test_support)
+add_dependencies(moving_target_pursuit_process_test observer console interceptor)
+gtest_discover_tests(moving_target_pursuit_process_test PROPERTIES TIMEOUT 20)
 
 add_executable(late_joiner_drone_state_process_test tests/late_joiner_drone_state_process_test.cpp)
 target_compile_definitions(

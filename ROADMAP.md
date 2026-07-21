@@ -336,7 +336,7 @@ the note into generic documentation or paste large source listings.
 
 ### 33 — Validate assignment in console core
 
-- [ ] **AI prompt:** Complete roadmap step 33 only. Add a console-core output port and validation use
+- [x] **AI prompt:** Complete roadmap step 33 only. Add a console-core output port and validation use
   case for assigning an available drone to a known target. Cover unknown, unavailable, duplicate,
   and valid selections with unit tests; add no DDS or terminal-input parsing. Add
   `docs/learning/33-assignment-use-case.md`, explaining why command validation precedes distributed
@@ -344,7 +344,7 @@ the note into generic documentation or paste large source listings.
 
 ### 34 — Send assignments through DDS
 
-- [ ] **AI prompt:** Complete roadmap step 34 only. Add the assignment DataWriter to the console DDS
+- [x] **AI prompt:** Complete roadmap step 34 only. Add the assignment DataWriter to the console DDS
   adapter and DataReader to the interceptor DDS adapter with the catalog's QoS and safe callback
   handoff. Test the adapter path with a captured interceptor input; do not change interceptor state
   yet. Add `docs/learning/34-assignment-topic.md`, explaining reliable delivery, volatility or
@@ -353,7 +353,7 @@ the note into generic documentation or paste large source listings.
 
 ### 35 — Apply assignment in interceptor core
 
-- [ ] **AI prompt:** Complete roadmap step 35 only. Teach interceptor core to validate an assignment
+- [x] **AI prompt:** Complete roadmap step 35 only. Teach interceptor core to validate an assignment
   addressed to itself, remember the target identifier, transition to assigned state, and publish the
   new drone state. Cover wrong-drone, duplicate, conflicting, and valid assignments with unit tests.
   Add `docs/learning/35-interceptor-assignment.md`, explaining idempotence and why distributed
@@ -362,7 +362,7 @@ the note into generic documentation or paste large source listings.
 
 ### 36 — Accept a start command from the operator
 
-- [ ] **AI prompt:** Complete roadmap step 36 only. Add console-core validation and a terminal UI
+- [x] **AI prompt:** Complete roadmap step 36 only. Add console-core validation and a terminal UI
   action for commanding an assigned drone to begin interception. Keep parsing replaceable and do
   not add its DDS endpoint yet. Add `docs/learning/36-operator-command.md`, explaining the boundary
   between human interaction, application intent, and DDS transport. Acceptance: tests show that
@@ -370,7 +370,7 @@ the note into generic documentation or paste large source listings.
 
 ### 37 — Send interception commands through DDS
 
-- [ ] **AI prompt:** Complete roadmap step 37 only. Add the interception-command DataWriter and
+- [x] **AI prompt:** Complete roadmap step 37 only. Add the interception-command DataWriter and
   DataReader adapter path with the catalog's QoS, mapping, duplicate policy, and safe shutdown.
   Deliver commands to a captured interceptor input without starting motion yet. Add
   `docs/learning/37-command-topic.md`, explaining how command identity and QoS combine to handle
@@ -379,7 +379,7 @@ the note into generic documentation or paste large source listings.
 
 ### 38 — Subscribe the interceptor to target updates
 
-- [ ] **AI prompt:** Complete roadmap step 38 only. Add the target-track DataReader to the interceptor
+- [x] **AI prompt:** Complete roadmap step 38 only. Add the target-track DataReader to the interceptor
   DDS adapter and an interceptor-core input that stores only the newest update for its assigned
   target. Ignore unrelated and stale tracks with tests; do not move the vehicle yet. Add
   `docs/learning/38-interceptor-target-reader.md`, explaining content selection in application code
@@ -389,7 +389,7 @@ the note into generic documentation or paste large source listings.
 
 ### 39 — Follow the latest target position
 
-- [ ] **AI prompt:** Complete roadmap step 39 only. Extend the interceptor state machine so a valid
+- [x] **AI prompt:** Complete roadmap step 39 only. Extend the interceptor state machine so a valid
   start command transitions to intercepting and each deterministic tick requests bounded movement
   toward the latest assigned target position, then reports updated drone state. Use test doubles;
   change no DDS code. Add `docs/learning/39-pursuit-loop.md`, explaining how asynchronous DDS updates
@@ -398,7 +398,7 @@ the note into generic documentation or paste large source listings.
 
 ### 40 — Verify pursuit of a moving target
 
-- [ ] **AI prompt:** Complete roadmap step 40 only. Wire the interceptor process loop to the
+- [x] **AI prompt:** Complete roadmap step 40 only. Wire the interceptor process loop to the
   simulated vehicle and add a bounded separate-process scenario that assigns, starts, and observes
   the drone change course after newer target samples. Add only the orchestration needed for
   deterministic automation of console actions. Add `docs/learning/40-moving-target-pursuit.md`,

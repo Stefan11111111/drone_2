@@ -59,6 +59,9 @@
   ```
 
 - Use `./scripts/format.sh --write` to format C and C++ files before running the format check.
+- `./scripts/run-clang-tidy.sh` analyzes only changed C++ translation units relative to `HEAD`,
+  including staged and untracked files. Use `./scripts/run-clang-tidy.sh --all` for an intentional
+  full-project audit.
 - For each step, run focused tests first and the complete available suite before marking the step
   complete. Process-level tests shall have bounded waits, actionable failure output, and reliable
   child-process cleanup; do not use fixed sleeps as a substitute for DDS match or readiness signals.
