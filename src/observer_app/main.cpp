@@ -99,14 +99,15 @@ void run(const Configuration &configuration)
     drone::observer::TargetTracker tracker{publisher};
     drone::simulated_radar::SimulatedRadar radar{tracker, observerScenario()};
 
-    std::cout << "observer: publishing target 1 in DDS domain " << configuration.domainId << '\n';
+    std::cout << "observer: publishing target 1 in DDS domain " << configuration.domainId << '\n'
+              << std::flush;
 
     std::uint64_t publishedTicks{};
     while (!configuration.tickCount || publishedTicks < *configuration.tickCount)
     {
         radar.tick();
         ++publishedTicks;
-        std::cout << "observer: published target update " << publishedTicks << '\n';
+        std::cout << "observer: published target update " << publishedTicks << '\n' << std::flush;
 
         if (!configuration.tickCount || publishedTicks < *configuration.tickCount)
         {
