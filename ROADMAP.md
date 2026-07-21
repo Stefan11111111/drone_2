@@ -316,7 +316,7 @@ the note into generic documentation or paste large source listings.
 
 ### 31 — Show live drone state on the console
 
-- [ ] **AI prompt:** Complete roadmap step 31 only. Extend console core, its DDS adapter, and the
+- [x] **AI prompt:** Complete roadmap step 31 only. Extend console core, its DDS adapter, and the
   terminal UI just enough to receive, project, and display latest drone state by identifier. Keep
   the change limited to the state path and test projection, DDS delivery, and rendering at their
   respective boundaries. Add `docs/learning/31-console-drone-state.md`, explaining how one

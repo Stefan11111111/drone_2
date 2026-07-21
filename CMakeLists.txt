@@ -101,7 +101,10 @@ add_library(interceptor_core src/interceptor_core/interceptor_state_machine.cpp)
 target_include_directories(interceptor_core PUBLIC include)
 target_link_libraries(interceptor_core PUBLIC drone_domain)
 
-add_library(console_core src/console_core/target_projection.cpp)
+add_library(
+  console_core
+  src/console_core/drone_projection.cpp
+  src/console_core/target_projection.cpp)
 target_include_directories(console_core PUBLIC include)
 target_link_libraries(console_core PUBLIC drone_domain)
 
@@ -122,6 +125,7 @@ add_library(
   src/drone_dds_transport/assignment_mapping.cpp
   src/drone_dds_transport/domain_participant_owner.cpp
   src/drone_dds_transport/drone_state_mapping.cpp
+  src/drone_dds_transport/drone_state_reader.cpp
   src/drone_dds_transport/drone_state_topic.cpp
   src/drone_dds_transport/drone_state_writer.cpp
   src/drone_dds_transport/explosion_event_mapping.cpp
@@ -141,7 +145,7 @@ add_library(interceptor_dds_adapter src/interceptor_dds_adapter/drone_state_publ
 target_include_directories(interceptor_dds_adapter PUBLIC include)
 target_link_libraries(interceptor_dds_adapter PUBLIC interceptor_core drone_dds_transport)
 
-add_library(console_dds_adapter src/console_dds_adapter/target_track_subscriber.cpp)
+add_library(console_dds_adapter src/console_dds_adapter/console_subscriber.cpp)
 target_include_directories(console_dds_adapter PUBLIC include)
 target_link_libraries(console_dds_adapter PUBLIC console_core drone_dds_transport)
 
@@ -285,6 +289,17 @@ target_link_libraries(
   observer_console_process_test PRIVATE GTest::gtest_main process_test_support)
 add_dependencies(observer_console_process_test observer console)
 gtest_discover_tests(observer_console_process_test PROPERTIES TIMEOUT 15)
+
+add_executable(live_system_state_process_test tests/live_system_state_process_test.cpp)
+target_compile_definitions(
+  live_system_state_process_test
+  PRIVATE OBSERVER_EXECUTABLE_PATH="$<TARGET_FILE:observer>"
+          CONSOLE_EXECUTABLE_PATH="$<TARGET_FILE:console>"
+          INTERCEPTOR_EXECUTABLE_PATH="$<TARGET_FILE:interceptor>")
+target_link_libraries(
+  live_system_state_process_test PRIVATE GTest::gtest_main process_test_support)
+add_dependencies(live_system_state_process_test observer console interceptor)
+gtest_discover_tests(live_system_state_process_test PROPERTIES TIMEOUT 15)
 
 add_executable(interceptor_publisher_process_test tests/interceptor_publisher_process_test.cpp)
 target_compile_definitions(

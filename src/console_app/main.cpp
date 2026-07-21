@@ -1,5 +1,6 @@
+#include "drone/console_core/drone_projection.h"
 #include "drone/console_core/target_projection.h"
-#include "drone/console_dds_adapter/target_track_subscriber.h"
+#include "drone/console_dds_adapter/console_subscriber.h"
 #include "drone/console_ui_adapter/terminal_view.h"
 
 #include <charconv>
@@ -21,7 +22,7 @@ using namespace std::chrono_literals;
 
 constexpr std::uint32_t defaultDomainId{0};
 constexpr std::uint64_t maximumDefaultPortDomainId{232};
-constexpr auto receiveTimeout{250ms};
+constexpr auto receiveTimeout{50ms};
 
 [[nodiscard]] std::uint32_t parseDomainId(const std::span<const char *const> arguments)
 {
@@ -50,45 +51,80 @@ constexpr auto receiveTimeout{250ms};
 }
 
 [[nodiscard]] std::string_view
-receiveIssueDescription(const drone::console_dds::TargetTrackReceiveIssue issue) noexcept
+receiveIssueDescription(const drone::console_dds::ReceiveIssue issue) noexcept
 {
-    using enum drone::console_dds::TargetTrackReceiveIssue;
+    using enum drone::console_dds::ReceiveIssue;
     switch (issue)
     {
     case timedOut:
         return "receive timed out";
     case discardedInvalidData:
-        return "discarded a TargetTrack instance-state notification";
+        return "discarded an instance-state notification";
     case discardedMalformedData:
-        return "discarded a malformed TargetTrack sample";
+        return "discarded a malformed sample";
     }
-    return "unknown TargetTrack receive issue";
+    return "unknown receive issue";
+}
+
+void reportTargetResult(const drone::console_dds::TargetTrackReceiveResult &received)
+{
+    if (!received.has_value() && received.error() != drone::console_dds::ReceiveIssue::timedOut)
+    {
+        std::cerr << "console: TargetTrack " << receiveIssueDescription(received.error()) << '\n';
+    }
+}
+
+void reportDroneResult(const drone::console_dds::DroneStateReceiveResult &received)
+{
+    if (!received.has_value() && received.error() != drone::console_dds::ReceiveIssue::timedOut)
+    {
+        std::cerr << "console: DroneState " << receiveIssueDescription(received.error()) << '\n';
+    }
 }
 
 void run(const std::uint32_t domainId)
 {
     drone::console::TargetProjection projection;
-    drone::console_dds::TargetTrackSubscriber subscriber{domainId, "drone_console", projection};
+    drone::console::DroneProjection drones;
+    drone::console_dds::ConsoleSubscriber subscriber{domainId, "drone_console", projection, drones};
     const drone::console_ui::TerminalView view{std::cout};
 
-    std::cout << "console: receiving target tracks in DDS domain " << domainId << '\n';
-    view.render(projection);
+    std::cout << "console: readers ready for targets and drones in DDS domain " << domainId << '\n';
+    view.render(projection, drones);
 
-    while (!subscriber.waitForWriterMatch(receiveTimeout))
-    {
-    }
-    std::cout << "console: matched observer TargetTrack writer\n" << std::flush;
-
+    bool targetWriterMatched{false};
+    bool droneWriterMatched{false};
     while (true)
     {
-        const auto received = subscriber.receiveNext(receiveTimeout);
-        if (received.has_value())
+        if (!targetWriterMatched && subscriber.waitForTargetWriterMatch(0ms))
         {
-            view.render(projection);
+            targetWriterMatched = true;
+            std::cout << "console: matched observer TargetTrack writer\n" << std::flush;
         }
-        else if (received.error() != drone::console_dds::TargetTrackReceiveIssue::timedOut)
+        if (!droneWriterMatched && subscriber.waitForDroneWriterMatch(0ms))
         {
-            std::cerr << "console: " << receiveIssueDescription(received.error()) << '\n';
+            droneWriterMatched = true;
+            std::cout << "console: matched interceptor DroneState writer\n" << std::flush;
+        }
+
+        const auto target = subscriber.receiveNextTarget(receiveTimeout);
+        if (target.has_value())
+        {
+            view.render(projection, drones);
+        }
+        else
+        {
+            reportTargetResult(target);
+        }
+
+        const auto drone = subscriber.receiveNextDrone(receiveTimeout);
+        if (drone.has_value())
+        {
+            view.render(projection, drones);
+        }
+        else
+        {
+            reportDroneResult(drone);
         }
     }
 }
