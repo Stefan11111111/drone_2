@@ -2,6 +2,7 @@
 
 #include "drone/domain/assignment.h"
 #include "drone/domain/drone_state.h"
+#include "drone/domain/interception_command.h"
 #include "drone/domain/target_track.h"
 
 #include <optional>
@@ -83,6 +84,58 @@ TargetTrackHandlingResult InterceptorStateMachine::onTargetTrack(const domain::T
 
     latestTargetTrack_ = track;
     return TargetTrackHandlingResult::updated;
+}
+
+void InterceptorStateMachine::onInterceptionCommand(const domain::InterceptionCommand &command)
+{
+    static_cast<void>(startInterception(command));
+}
+
+InterceptionStartResult
+InterceptorStateMachine::startInterception(const domain::InterceptionCommand &command)
+{
+    if (command.droneId() != droneId_)
+    {
+        return InterceptionStartResult::wrongDrone;
+    }
+    if (startedCommandId_ == command.commandId())
+    {
+        return InterceptionStartResult::duplicate;
+    }
+    if (!state_.has_value() || state_->status() != domain::DroneStatus::assigned)
+    {
+        return InterceptionStartResult::notAssigned;
+    }
+    if (command.targetId() != *state_->assignedTargetId())
+    {
+        return InterceptionStartResult::targetMismatch;
+    }
+
+    const auto position = positioning_.currentPosition();
+    state_.emplace(droneId_, position.position, position.measuredAt,
+                   domain::DroneStatus::intercepting, command.targetId());
+    stateOutput_.publish(*state_);
+    startedCommandId_ = command.commandId();
+    return InterceptionStartResult::started;
+}
+
+InterceptionTickResult InterceptorStateMachine::tick(const domain::Timestamp::Duration timeStep)
+{
+    if (!state_.has_value() || state_->status() != domain::DroneStatus::intercepting)
+    {
+        return InterceptionTickResult::notIntercepting;
+    }
+    if (!latestTargetTrack_.has_value())
+    {
+        return InterceptionTickResult::awaitingTarget;
+    }
+
+    flightControl_.moveToward(latestTargetTrack_->position(), timeStep);
+    const auto position = positioning_.currentPosition();
+    state_.emplace(droneId_, position.position, position.measuredAt,
+                   domain::DroneStatus::intercepting, *state_->assignedTargetId());
+    stateOutput_.publish(*state_);
+    return InterceptionTickResult::moved;
 }
 
 const std::optional<domain::DroneState> &InterceptorStateMachine::state() const noexcept

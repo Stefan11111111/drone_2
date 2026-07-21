@@ -389,7 +389,7 @@ the note into generic documentation or paste large source listings.
 
 ### 39 — Follow the latest target position
 
-- [ ] **AI prompt:** Complete roadmap step 39 only. Extend the interceptor state machine so a valid
+- [x] **AI prompt:** Complete roadmap step 39 only. Extend the interceptor state machine so a valid
   start command transitions to intercepting and each deterministic tick requests bounded movement
   toward the latest assigned target position, then reports updated drone state. Use test doubles;
   change no DDS code. Add `docs/learning/39-pursuit-loop.md`, explaining how asynchronous DDS updates
