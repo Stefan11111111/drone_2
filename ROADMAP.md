@@ -467,7 +467,7 @@ the note into generic documentation or paste large source listings.
 
 ### 47 — Document a separate-machine demonstration
 
-- [ ] **AI prompt:** Complete roadmap step 47 only. Add a concise runbook for building and running
+- [x] **AI prompt:** Complete roadmap step 47 only. Add a concise runbook for building and running
   observer, console, and interceptor on one machine and on separate machines, including network
   prerequisites, domain configuration, discovery expectations, troubleshooting, and the exact
   operator interaction. Do not add a Discovery Server or transport customization unless the
