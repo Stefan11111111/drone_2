@@ -9,6 +9,7 @@
 #include "drone/domain/timestamp.h"
 #include "drone/interceptor_core/drone_state_output_port.h"
 #include "drone/interceptor_core/flight_control_port.h"
+#include "drone/interceptor_core/interception_effect_port.h"
 #include "drone/interceptor_core/interceptor_state_machine.h"
 #include "drone/interceptor_core/positioning_port.h"
 #include "drone/interceptor_core/target_track_input_port.h"
@@ -35,6 +36,8 @@ using drone::domain::TargetTrack;
 using drone::domain::Timestamp;
 using drone::interceptor::DroneStateOutputPort;
 using drone::interceptor::FlightControlPort;
+using drone::interceptor::InterceptionEffectPort;
+using drone::interceptor::InterceptionEffectResult;
 using drone::interceptor::InterceptorStateMachine;
 using drone::interceptor::PositioningPort;
 using drone::interceptor::PositionSample;
@@ -56,13 +59,18 @@ class FixedPositioning final : public PositioningPort
     }
 };
 
-class CapturingFlightControl final : public FlightControlPort
+class CapturingFlightControl final : public FlightControlPort, public InterceptionEffectPort
 {
   public:
     void moveToward(const Position &destination, const Timestamp::Duration timeStep) override
     {
         destinations.push_back(destination);
         timeSteps.push_back(timeStep);
+    }
+
+    [[nodiscard]] InterceptionEffectResult trigger() override
+    {
+        return InterceptionEffectResult::succeeded;
     }
 
     std::vector<Position> destinations;
@@ -84,7 +92,11 @@ TEST(InterceptorTargetDdsAdapter,
     FixedPositioning positioning;
     CapturingFlightControl flightControl;
     IgnoringStateOutput stateOutput;
-    InterceptorStateMachine interceptor{DroneId{7}, positioning, flightControl, stateOutput};
+    InterceptorStateMachine interceptor{{.droneId = DroneId{7}, .arrivalToleranceMeters = 0.25},
+                                        positioning,
+                                        flightControl,
+                                        flightControl,
+                                        stateOutput};
     interceptor.start();
     ASSERT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{42}}),
               drone::interceptor::AssignmentHandlingResult::applied);

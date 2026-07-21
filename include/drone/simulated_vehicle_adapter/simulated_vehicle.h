@@ -4,6 +4,7 @@
 #include "drone/domain/position.h"
 #include "drone/domain/timestamp.h"
 #include "drone/interceptor_core/flight_control_port.h"
+#include "drone/interceptor_core/interception_effect_port.h"
 #include "drone/interceptor_core/positioning_port.h"
 
 namespace drone::simulated_vehicle
@@ -17,7 +18,8 @@ struct Configuration final
 };
 
 class SimulatedVehicle final : public interceptor::PositioningPort,
-                               public interceptor::FlightControlPort
+                               public interceptor::FlightControlPort,
+                               public interceptor::InterceptionEffectPort
 {
   public:
     explicit SimulatedVehicle(Configuration configuration);
@@ -25,6 +27,7 @@ class SimulatedVehicle final : public interceptor::PositioningPort,
     [[nodiscard]] interceptor::PositionSample currentPosition() const override;
     void moveToward(const domain::Position &destination,
                     domain::Timestamp::Duration timeStep) override;
+    [[nodiscard]] interceptor::InterceptionEffectResult trigger() override;
     void advanceTime(domain::Timestamp::Duration timeStep);
 
   private:

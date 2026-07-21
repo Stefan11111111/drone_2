@@ -8,6 +8,7 @@
 #include "drone/interceptor_core/drone_state_output_port.h"
 #include "drone/interceptor_core/flight_control_port.h"
 #include "drone/interceptor_core/interception_command_input_port.h"
+#include "drone/interceptor_core/interception_effect_port.h"
 #include "drone/interceptor_core/positioning_port.h"
 #include "drone/interceptor_core/target_track_input_port.h"
 
@@ -29,8 +30,16 @@ enum class InterceptionStartResult : std::uint8_t
 enum class InterceptionTickResult : std::uint8_t
 {
     moved,
+    effectSucceeded,
+    effectFailed,
     notIntercepting,
     awaitingTarget,
+};
+
+struct InterceptorConfiguration final
+{
+    domain::DroneId droneId;
+    double arrivalToleranceMeters;
 };
 
 class InterceptorStateMachine final : public AssignmentInputPort,
@@ -38,8 +47,9 @@ class InterceptorStateMachine final : public AssignmentInputPort,
                                       public TargetTrackInputPort
 {
   public:
-    InterceptorStateMachine(domain::DroneId droneId, PositioningPort &positioning,
-                            FlightControlPort &flightControl, DroneStateOutputPort &stateOutput);
+    InterceptorStateMachine(InterceptorConfiguration configuration, PositioningPort &positioning,
+                            FlightControlPort &flightControl, InterceptionEffectPort &effect,
+                            DroneStateOutputPort &stateOutput);
 
     void start();
     [[nodiscard]] AssignmentHandlingResult
@@ -59,7 +69,9 @@ class InterceptorStateMachine final : public AssignmentInputPort,
     domain::DroneId droneId_;
     PositioningPort &positioning_;
     FlightControlPort &flightControl_;
+    InterceptionEffectPort &effect_;
     DroneStateOutputPort &stateOutput_;
+    double arrivalToleranceMeters_;
     std::optional<domain::DroneState> state_;
     std::optional<domain::TargetTrack> latestTargetTrack_;
     std::optional<domain::InterceptionCommandId> startedCommandId_;

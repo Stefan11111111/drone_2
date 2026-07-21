@@ -409,7 +409,7 @@ the note into generic documentation or paste large source listings.
 
 ### 41 — Detect arrival and request the simulated effect
 
-- [ ] **AI prompt:** Complete roadmap step 41 only. Add an interception-effect output port and core
+- [x] **AI prompt:** Complete roadmap step 41 only. Add an interception-effect output port and core
   arrival logic that triggers exactly once when the drone reaches the current assigned target
   according to an explicit tolerance. Extend `simulated_vehicle_adapter` or add its cohesive effect
   implementation without putting simulation details in core. Add

@@ -64,8 +64,12 @@ void run(const std::uint32_t domainId)
         {.initialPosition = drone::domain::Position{0.0, 0.0, 0.0},
          .startsAt = drone::domain::Timestamp{0ms},
          .maximumSpeedMetersPerSecond = 50.0}};
-    drone::interceptor::InterceptorStateMachine stateMachine{drone::domain::DroneId{1}, vehicle,
-                                                             vehicle, statePublisher};
+    drone::interceptor::InterceptorStateMachine stateMachine{
+        {.droneId = drone::domain::DroneId{1}, .arrivalToleranceMeters = 0.25},
+        vehicle,
+        vehicle,
+        vehicle,
+        statePublisher};
     drone::interceptor_dds::AssignmentSubscriber assignmentSubscriber{
         domainId, "drone_interceptor_assignment_reader", stateMachine};
     drone::interceptor_dds::InterceptionCommandSubscriber commandSubscriber{

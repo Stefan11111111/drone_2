@@ -10,6 +10,7 @@
 #include "drone/interceptor_core/assignment_input_port.h"
 #include "drone/interceptor_core/drone_state_output_port.h"
 #include "drone/interceptor_core/flight_control_port.h"
+#include "drone/interceptor_core/interception_effect_port.h"
 #include "drone/interceptor_core/interceptor_state_machine.h"
 #include "drone/interceptor_core/positioning_port.h"
 #include "drone/interceptor_dds_adapter/assignment_subscriber.h"
@@ -38,6 +39,8 @@ using drone::domain::Timestamp;
 using drone::interceptor::AssignmentHandlingResult;
 using drone::interceptor::AssignmentInputPort;
 using drone::interceptor::FlightControlPort;
+using drone::interceptor::InterceptionEffectPort;
+using drone::interceptor::InterceptionEffectResult;
 using drone::interceptor::InterceptorStateMachine;
 using drone::interceptor::PositioningPort;
 using drone::interceptor::PositionSample;
@@ -75,13 +78,18 @@ class FixedPositioning final : public PositioningPort
                           .measuredAt = Timestamp{2'000ms}};
 };
 
-class IgnoringFlightControl final : public FlightControlPort
+class IgnoringFlightControl final : public FlightControlPort, public InterceptionEffectPort
 {
   public:
     void moveToward(const Position &destination, const Timestamp::Duration timeStep) override
     {
         static_cast<void>(destination);
         static_cast<void>(timeStep);
+    }
+
+    [[nodiscard]] InterceptionEffectResult trigger() override
+    {
+        return InterceptionEffectResult::succeeded;
     }
 };
 
@@ -113,7 +121,11 @@ TEST(AssignmentDdsAdapter,
     DroneStatePublisher statePublisher{assignedStateDomainId, "drone_step_35_state_writer"};
     FixedPositioning positioning;
     IgnoringFlightControl flightControl;
-    InterceptorStateMachine interceptor{DroneId{7}, positioning, flightControl, statePublisher};
+    InterceptorStateMachine interceptor{{.droneId = DroneId{7}, .arrivalToleranceMeters = 0.25},
+                                        positioning,
+                                        flightControl,
+                                        flightControl,
+                                        statePublisher};
     AssignmentSubscriber assignmentSubscriber{assignedStateDomainId,
                                               "drone_step_35_assignment_reader", interceptor};
     AssignmentPublisher assignmentPublisher{assignedStateDomainId,
