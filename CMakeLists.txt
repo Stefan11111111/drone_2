@@ -122,6 +122,8 @@ add_library(
   src/drone_dds_transport/assignment_mapping.cpp
   src/drone_dds_transport/domain_participant_owner.cpp
   src/drone_dds_transport/drone_state_mapping.cpp
+  src/drone_dds_transport/drone_state_topic.cpp
+  src/drone_dds_transport/drone_state_writer.cpp
   src/drone_dds_transport/explosion_event_mapping.cpp
   src/drone_dds_transport/interception_command_mapping.cpp
   src/drone_dds_transport/target_track_reader.cpp
@@ -135,6 +137,10 @@ add_library(observer_dds_adapter src/observer_dds_adapter/target_track_publisher
 target_include_directories(observer_dds_adapter PUBLIC include)
 target_link_libraries(observer_dds_adapter PUBLIC observer_core drone_dds_transport)
 
+add_library(interceptor_dds_adapter src/interceptor_dds_adapter/drone_state_publisher.cpp)
+target_include_directories(interceptor_dds_adapter PUBLIC include)
+target_link_libraries(interceptor_dds_adapter PUBLIC interceptor_core drone_dds_transport)
+
 add_library(console_dds_adapter src/console_dds_adapter/target_track_subscriber.cpp)
 target_include_directories(console_dds_adapter PUBLIC include)
 target_link_libraries(console_dds_adapter PUBLIC console_core drone_dds_transport)
@@ -142,6 +148,10 @@ target_link_libraries(console_dds_adapter PUBLIC console_core drone_dds_transpor
 add_executable(observer src/observer_app/main.cpp)
 target_link_libraries(
   observer PRIVATE observer_core observer_dds_adapter simulated_radar_adapter)
+
+add_executable(interceptor src/interceptor_app/main.cpp)
+target_link_libraries(
+  interceptor PRIVATE interceptor_core interceptor_dds_adapter simulated_vehicle_adapter)
 
 add_executable(console src/console_app/main.cpp)
 target_link_libraries(
@@ -275,3 +285,13 @@ target_link_libraries(
   observer_console_process_test PRIVATE GTest::gtest_main process_test_support)
 add_dependencies(observer_console_process_test observer console)
 gtest_discover_tests(observer_console_process_test PROPERTIES TIMEOUT 15)
+
+add_executable(interceptor_publisher_process_test tests/interceptor_publisher_process_test.cpp)
+target_compile_definitions(
+  interceptor_publisher_process_test
+  PRIVATE INTERCEPTOR_EXECUTABLE_PATH="$<TARGET_FILE:interceptor>")
+target_link_libraries(
+  interceptor_publisher_process_test
+  PRIVATE GTest::gtest_main drone_dds_transport drone_dds_types fastdds process_test_support)
+add_dependencies(interceptor_publisher_process_test interceptor)
+gtest_discover_tests(interceptor_publisher_process_test PROPERTIES TIMEOUT 15)

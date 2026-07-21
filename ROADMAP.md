@@ -307,7 +307,7 @@ the note into generic documentation or paste large source listings.
 
 ### 30 — Publish interceptor state
 
-- [ ] **AI prompt:** Complete roadmap step 30 only. Add the drone-state DataWriter path to
+- [x] **AI prompt:** Complete roadmap step 30 only. Add the drone-state DataWriter path to
   `interceptor_dds_adapter` and a minimal interceptor composition executable wired to the simulated
   vehicle. Publish its available state using the catalog's key and QoS. Add
   `docs/learning/30-interceptor-state-publisher.md`, explaining keyed state updates and DDS instance
