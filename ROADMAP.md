@@ -260,7 +260,7 @@ the note into generic documentation or paste large source listings.
 
 ### 25 — Receive target tracks through DDS
 
-- [ ] **AI prompt:** Complete roadmap step 25 only. Implement the target-track receive side of
+- [x] **AI prompt:** Complete roadmap step 25 only. Implement the target-track receive side of
   `console_dds_adapter`, mapping valid taken samples into the console-core input port and handling
   invalid samples and shutdown safely. Keep core work out of the Fast DDS callback if it could block
   middleware threads. Add `docs/learning/25-console-subscriber.md`, explaining listeners or
