@@ -14,7 +14,6 @@
 #include <string>
 #include <system_error>
 #include <thread>
-#include <utility>
 #include <vector>
 
 #include <sys/types.h>
@@ -22,8 +21,6 @@
 #include <unistd.h>
 
 #include <gtest/gtest.h>
-
-extern char **environ;
 
 namespace
 {
@@ -40,15 +37,21 @@ constexpr auto dataTimeout{2s};
 constexpr auto processExitTimeout{2s};
 constexpr std::size_t requiredUpdateCount{3};
 
+struct ObserverProcessConfiguration final
+{
+    DomainId_t domainId;
+    std::uint64_t tickCount;
+};
+
 class ChildProcess final
 {
   public:
-    ChildProcess(const std::string &executablePath, const DomainId_t domainId,
-                 const std::uint64_t tickCount)
+    ChildProcess(const std::string &executablePath,
+                 const ObserverProcessConfiguration configuration)
     {
         auto executable = executablePath;
-        auto domain = std::to_string(domainId);
-        auto ticks = std::to_string(tickCount);
+        auto domain = std::to_string(configuration.domainId);
+        auto ticks = std::to_string(configuration.tickCount);
         std::array arguments{executable.data(), domain.data(), ticks.data(),
                              static_cast<char *>(nullptr)};
 
@@ -131,35 +134,78 @@ class ChildProcess final
     pid_t processId_{-1};
 };
 
+[[nodiscard]] ::testing::AssertionResult
+receiveObserverTracks(TargetTrackReader &reader, std::vector<TargetTrack> &receivedTracks)
+{
+    if (!reader.waitForWriterMatch(discoveryTimeout))
+    {
+        return ::testing::AssertionFailure()
+               << "No observer TargetTrack DataWriter matched the probe within "
+               << discoveryTimeout.count() << " ms";
+    }
+
+    receivedTracks.reserve(requiredUpdateCount);
+    for (std::size_t index = 0; index < requiredUpdateCount; ++index)
+    {
+        if (!reader.waitForData(dataTimeout))
+        {
+            return ::testing::AssertionFailure()
+                   << "Received only " << receivedTracks.size() << " of " << requiredUpdateCount
+                   << " expected observer updates before a " << dataTimeout.count()
+                   << " ms timeout";
+        }
+
+        const auto track = reader.take();
+        if (!track.has_value())
+        {
+            return ::testing::AssertionFailure()
+                   << "Observer process published a TargetTrack that failed domain mapping";
+        }
+        receivedTracks.push_back(*track);
+    }
+
+    return ::testing::AssertionSuccess();
+}
+
+[[nodiscard]] ::testing::AssertionResult
+verifySuccessiveMovingTracks(const std::vector<TargetTrack> &receivedTracks)
+{
+    if (receivedTracks.size() != requiredUpdateCount)
+    {
+        return ::testing::AssertionFailure() << "Expected " << requiredUpdateCount
+                                             << " tracks, received " << receivedTracks.size();
+    }
+    if (receivedTracks[0].targetId() != receivedTracks[1].targetId() ||
+        receivedTracks[1].targetId() != receivedTracks[2].targetId())
+    {
+        return ::testing::AssertionFailure() << "Successive updates changed the target identifier";
+    }
+    if (receivedTracks[0].measuredAt() >= receivedTracks[1].measuredAt() ||
+        receivedTracks[1].measuredAt() >= receivedTracks[2].measuredAt())
+    {
+        return ::testing::AssertionFailure()
+               << "Successive updates did not have increasing measurement times";
+    }
+    if (receivedTracks[0].position() == receivedTracks[1].position() ||
+        receivedTracks[1].position() == receivedTracks[2].position())
+    {
+        return ::testing::AssertionFailure() << "Successive updates did not move the target";
+    }
+
+    return ::testing::AssertionSuccess();
+}
+
 TEST(ObserverPublisher,
      GivenASeparateObserverProcess_WhenItsWriterMatches_ThenMultipleMovingTracksAreReceived)
 {
-    ChildProcess observer{OBSERVER_EXECUTABLE_PATH, observerProcessDomainId, 100};
+    ChildProcess observer{OBSERVER_EXECUTABLE_PATH,
+                          {.domainId = observerProcessDomainId, .tickCount = 100}};
     DomainParticipantOwner probeParticipant{observerProcessDomainId, "drone_step_23_probe"};
     TargetTrackReader reader{probeParticipant.participant()};
 
-    ASSERT_TRUE(reader.waitForWriterMatch(discoveryTimeout))
-        << "No observer TargetTrack DataWriter matched the probe within "
-        << discoveryTimeout.count() << " ms";
-
     std::vector<TargetTrack> receivedTracks;
-    for (std::size_t index = 0; index < requiredUpdateCount; ++index)
-    {
-        ASSERT_TRUE(reader.waitForData(dataTimeout))
-            << "Received only " << receivedTracks.size() << " of " << requiredUpdateCount
-            << " expected observer updates before a " << dataTimeout.count() << " ms timeout";
-        auto track = reader.take();
-        ASSERT_TRUE(track.has_value())
-            << "Observer process published a TargetTrack that failed domain mapping";
-        receivedTracks.push_back(std::move(*track));
-    }
-
-    EXPECT_EQ(receivedTracks[0].targetId(), receivedTracks[1].targetId());
-    EXPECT_EQ(receivedTracks[1].targetId(), receivedTracks[2].targetId());
-    EXPECT_LT(receivedTracks[0].measuredAt(), receivedTracks[1].measuredAt());
-    EXPECT_LT(receivedTracks[1].measuredAt(), receivedTracks[2].measuredAt());
-    EXPECT_NE(receivedTracks[0].position(), receivedTracks[1].position());
-    EXPECT_NE(receivedTracks[1].position(), receivedTracks[2].position());
+    ASSERT_TRUE(receiveObserverTracks(reader, receivedTracks));
+    EXPECT_TRUE(verifySuccessiveMovingTracks(receivedTracks));
     EXPECT_TRUE(observer.terminateAndWait(processExitTimeout))
         << "The observer child process could not be cleaned up within "
         << processExitTimeout.count() << " ms";

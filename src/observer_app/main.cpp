@@ -7,10 +7,12 @@
 
 #include <charconv>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <exception>
 #include <iostream>
 #include <optional>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -32,39 +34,44 @@ struct Configuration final
     std::optional<std::uint64_t> tickCount;
 };
 
-[[nodiscard]] std::uint64_t parseUnsigned(const std::string_view text, const std::string_view name)
+struct NamedArgument final
+{
+    std::string_view text;
+    std::string_view name;
+};
+
+[[nodiscard]] std::uint64_t parseUnsigned(const NamedArgument argument)
 {
     std::uint64_t value{};
-    const auto *const end = text.data() + text.size();
-    const auto [parsedEnd, error] = std::from_chars(text.data(), end, value);
-    if (error != std::errc{} || parsedEnd != end)
+    const auto [parsedEnd, error] =
+        std::from_chars(argument.text.begin(), argument.text.end(), value);
+    if (error != std::errc{} || parsedEnd != argument.text.end())
     {
-        throw std::invalid_argument{std::string{name} + " must be an unsigned integer"};
+        throw std::invalid_argument{std::string{argument.name} + " must be an unsigned integer"};
     }
     return value;
 }
 
-[[nodiscard]] Configuration parseConfiguration(const int argumentCount,
-                                               const char *const arguments[])
+[[nodiscard]] Configuration parseConfiguration(const std::span<const char *const> arguments)
 {
-    if (argumentCount > 3)
+    if (arguments.size() > 3)
     {
         throw std::invalid_argument{"usage: observer [domain-id [tick-count]]"};
     }
 
     Configuration configuration;
-    if (argumentCount >= 2)
+    if (arguments.size() >= 2)
     {
-        const auto domainId = parseUnsigned(arguments[1], "domain-id");
+        const auto domainId = parseUnsigned({.text = arguments[1], .name = "domain-id"});
         if (domainId > maximumDefaultPortDomainId)
         {
             throw std::invalid_argument{"domain-id must not exceed 232"};
         }
         configuration.domainId = static_cast<std::uint32_t>(domainId);
     }
-    if (argumentCount == 3)
+    if (arguments.size() == 3)
     {
-        const auto tickCount = parseUnsigned(arguments[2], "tick-count");
+        const auto tickCount = parseUnsigned({.text = arguments[2], .name = "tick-count"});
         if (tickCount == 0)
         {
             throw std::invalid_argument{"tick-count must be positive"};
@@ -114,7 +121,8 @@ int main(const int argumentCount, const char *const arguments[])
 {
     try
     {
-        run(parseConfiguration(argumentCount, arguments));
+        run(parseConfiguration(
+            std::span<const char *const>{arguments, static_cast<std::size_t>(argumentCount)}));
         return 0;
     }
     catch (const std::exception &error)
