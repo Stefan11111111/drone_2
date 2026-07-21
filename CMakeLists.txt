@@ -123,6 +123,10 @@ add_library(observer_dds_adapter src/observer_dds_adapter/target_track_publisher
 target_include_directories(observer_dds_adapter PUBLIC include)
 target_link_libraries(observer_dds_adapter PUBLIC observer_core drone_dds_transport)
 
+add_library(console_dds_adapter src/console_dds_adapter/target_track_subscriber.cpp)
+target_include_directories(console_dds_adapter PUBLIC include)
+target_link_libraries(console_dds_adapter PUBLIC console_core drone_dds_transport)
+
 add_executable(observer src/observer_app/main.cpp)
 target_link_libraries(
   observer PRIVATE observer_core observer_dds_adapter simulated_radar_adapter)
@@ -209,6 +213,12 @@ gtest_discover_tests(observer_core_test)
 add_executable(console_core_test tests/console_core_test.cpp)
 target_link_libraries(console_core_test PRIVATE GTest::gtest_main console_core)
 gtest_discover_tests(console_core_test)
+
+add_executable(console_dds_adapter_test tests/console_dds_adapter_test.cpp)
+target_link_libraries(
+  console_dds_adapter_test
+  PRIVATE GTest::gtest_main console_dds_adapter drone_dds_transport drone_dds_types fastdds)
+gtest_discover_tests(console_dds_adapter_test)
 
 add_executable(simulated_radar_adapter_test tests/simulated_radar_adapter_test.cpp)
 target_link_libraries(

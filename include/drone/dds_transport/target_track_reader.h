@@ -12,6 +12,7 @@
 #include <condition_variable>
 #include <expected>
 #include <mutex>
+#include <optional>
 
 namespace eprosima::fastdds::dds
 {
@@ -40,6 +41,8 @@ class TargetTrackReader final : private eprosima::fastdds::dds::DataReaderListen
     [[nodiscard]] bool waitForWriterMatch(std::chrono::milliseconds timeout);
     [[nodiscard]] bool waitForIncompatibleQos(std::chrono::milliseconds timeout);
     [[nodiscard]] bool waitForData(std::chrono::milliseconds timeout);
+    [[nodiscard]]
+    std::expected<std::optional<domain::TargetTrack>, TargetTrackMappingError> takeNext();
     [[nodiscard]] std::expected<domain::TargetTrack, TargetTrackMappingError> take();
 
   private:

@@ -17,6 +17,7 @@
 #include <chrono>
 #include <expected>
 #include <mutex>
+#include <optional>
 #include <stdexcept>
 #include <string>
 
@@ -129,7 +130,8 @@ bool TargetTrackReader::waitForData(const std::chrono::milliseconds timeout)
     return reader_->wait_for_unread_message(toDdsDuration(timeout));
 }
 
-std::expected<domain::TargetTrack, TargetTrackMappingError> TargetTrackReader::take()
+std::expected<std::optional<domain::TargetTrack>, TargetTrackMappingError>
+TargetTrackReader::takeNext()
 {
     dds::TargetTrack wireTrack;
     eprosima::fastdds::dds::SampleInfo sampleInfo{};
@@ -140,10 +142,29 @@ std::expected<domain::TargetTrack, TargetTrackMappingError> TargetTrackReader::t
     }
     if (!sampleInfo.valid_data)
     {
-        throw std::runtime_error{"Taken TargetTrack sample contains no valid data"};
+        return std::optional<domain::TargetTrack>{};
     }
 
-    return fromWireTargetTrack(wireTrack);
+    auto mappedTrack = fromWireTargetTrack(wireTrack);
+    if (!mappedTrack.has_value())
+    {
+        return std::unexpected{mappedTrack.error()};
+    }
+    return std::optional<domain::TargetTrack>{*mappedTrack};
+}
+
+std::expected<domain::TargetTrack, TargetTrackMappingError> TargetTrackReader::take()
+{
+    auto sample = takeNext();
+    if (!sample.has_value())
+    {
+        return std::unexpected{sample.error()};
+    }
+    if (!sample->has_value())
+    {
+        throw std::runtime_error{"Taken TargetTrack sample contains no valid data"};
+    }
+    return **sample;
 }
 
 } // namespace drone::dds_transport
