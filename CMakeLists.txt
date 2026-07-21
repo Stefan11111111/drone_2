@@ -106,6 +106,7 @@ add_library(
   src/console_core/assignment_use_case.cpp
   src/console_core/drone_projection.cpp
   src/console_core/interception_command_use_case.cpp
+  src/console_core/outcome_projection.cpp
   src/console_core/target_projection.cpp)
 target_include_directories(console_core PUBLIC include)
 target_link_libraries(console_core PUBLIC drone_domain)
@@ -136,7 +137,10 @@ add_library(
   src/drone_dds_transport/drone_state_reader.cpp
   src/drone_dds_transport/drone_state_topic.cpp
   src/drone_dds_transport/drone_state_writer.cpp
+  src/drone_dds_transport/explosion_event_reader.cpp
   src/drone_dds_transport/explosion_event_mapping.cpp
+  src/drone_dds_transport/explosion_event_topic.cpp
+  src/drone_dds_transport/explosion_event_writer.cpp
   src/drone_dds_transport/interception_command_mapping.cpp
   src/drone_dds_transport/interception_command_reader.cpp
   src/drone_dds_transport/interception_command_topic.cpp
@@ -156,6 +160,7 @@ add_library(
   interceptor_dds_adapter
   src/interceptor_dds_adapter/assignment_subscriber.cpp
   src/interceptor_dds_adapter/drone_state_publisher.cpp
+  src/interceptor_dds_adapter/explosion_event_publisher.cpp
   src/interceptor_dds_adapter/interception_command_subscriber.cpp
   src/interceptor_dds_adapter/target_track_subscriber.cpp)
 target_include_directories(interceptor_dds_adapter PUBLIC include)
@@ -165,6 +170,7 @@ add_library(
   console_dds_adapter
   src/console_dds_adapter/assignment_publisher.cpp
   src/console_dds_adapter/console_subscriber.cpp
+  src/console_dds_adapter/explosion_event_subscriber.cpp
   src/console_dds_adapter/interception_command_publisher.cpp)
 target_include_directories(console_dds_adapter PUBLIC include)
 target_link_libraries(console_dds_adapter PUBLIC console_core drone_dds_transport)
@@ -304,6 +310,18 @@ target_link_libraries(
   PRIVATE GTest::gtest_main interceptor_dds_adapter drone_dds_transport)
 gtest_discover_tests(interceptor_target_dds_adapter_test)
 
+add_executable(explosion_event_dds_adapter_test tests/explosion_event_dds_adapter_test.cpp)
+target_link_libraries(
+  explosion_event_dds_adapter_test
+  PRIVATE GTest::gtest_main interceptor_dds_adapter drone_dds_transport)
+gtest_discover_tests(explosion_event_dds_adapter_test)
+
+add_executable(console_outcome_dds_adapter_test tests/console_outcome_dds_adapter_test.cpp)
+target_link_libraries(
+  console_outcome_dds_adapter_test
+  PRIVATE GTest::gtest_main console_dds_adapter console_ui_adapter drone_dds_transport)
+gtest_discover_tests(console_outcome_dds_adapter_test)
+
 add_executable(simulated_radar_adapter_test tests/simulated_radar_adapter_test.cpp)
 target_link_libraries(
   simulated_radar_adapter_test PRIVATE GTest::gtest_main simulated_radar_adapter)
@@ -356,6 +374,17 @@ target_link_libraries(
   moving_target_pursuit_process_test PRIVATE GTest::gtest_main process_test_support)
 add_dependencies(moving_target_pursuit_process_test observer console interceptor)
 gtest_discover_tests(moving_target_pursuit_process_test PROPERTIES TIMEOUT 20)
+
+add_executable(end_to_end_interception_process_test tests/end_to_end_interception_process_test.cpp)
+target_compile_definitions(
+  end_to_end_interception_process_test
+  PRIVATE OBSERVER_EXECUTABLE_PATH="$<TARGET_FILE:observer>"
+          CONSOLE_EXECUTABLE_PATH="$<TARGET_FILE:console>"
+          INTERCEPTOR_EXECUTABLE_PATH="$<TARGET_FILE:interceptor>")
+target_link_libraries(
+  end_to_end_interception_process_test PRIVATE GTest::gtest_main process_test_support)
+add_dependencies(end_to_end_interception_process_test observer console interceptor)
+gtest_discover_tests(end_to_end_interception_process_test PROPERTIES TIMEOUT 45)
 
 add_executable(late_joiner_drone_state_process_test tests/late_joiner_drone_state_process_test.cpp)
 target_compile_definitions(

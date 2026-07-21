@@ -4,9 +4,12 @@
 #include "drone/console_core/drone_projection.h"
 #include "drone/console_core/interception_command_output_port.h"
 #include "drone/console_core/interception_command_use_case.h"
+#include "drone/console_core/outcome_projection.h"
 #include "drone/console_core/target_projection.h"
 #include "drone/domain/drone_id.h"
 #include "drone/domain/drone_state.h"
+#include "drone/domain/explosion_event.h"
+#include "drone/domain/explosion_event_id.h"
 #include "drone/domain/interception_command.h"
 #include "drone/domain/interception_command_id.h"
 #include "drone/domain/position.h"
@@ -27,6 +30,7 @@ namespace
 using drone::console::DroneProjection;
 using drone::console::InterceptionCommandOutputPort;
 using drone::console::InterceptionCommandUseCase;
+using drone::console::OutcomeProjection;
 using drone::console::TargetProjection;
 using drone::console_ui::TerminalAction;
 using drone::console_ui::TerminalActionResult;
@@ -34,6 +38,8 @@ using drone::console_ui::TerminalView;
 using drone::domain::DroneId;
 using drone::domain::DroneState;
 using drone::domain::DroneStatus;
+using drone::domain::ExplosionEvent;
+using drone::domain::ExplosionEventId;
 using drone::domain::InterceptionCommand;
 using drone::domain::InterceptionCommandId;
 using drone::domain::Position;
@@ -57,16 +63,20 @@ TEST(TerminalView, GivenNoLiveTargets_WhenRendered_ThenTheEmptySnapshotIsExplici
 {
     TargetProjection projection;
     DroneProjection drones;
+    OutcomeProjection outcomes{projection, drones};
     std::ostringstream output;
     TerminalView view{output};
 
-    view.render(projection, drones);
+    view.render(projection, drones, outcomes);
 
     EXPECT_EQ(output.str(), "Targets (0)\n"
                             "ID | X (m) | Y (m) | Z (m) | Measured (ms)\n"
                             "<none>\n\n"
                             "Drones (0)\n"
                             "ID | X (m) | Y (m) | Z (m) | Status | Target | Reported (ms)\n"
+                            "<none>\n\n"
+                            "Interception outcomes (0)\n"
+                            "Event | Drone | Target | X (m) | Y (m) | Z (m) | Occurred (ms)\n"
                             "<none>\n\n");
 }
 
@@ -74,6 +84,7 @@ TEST(TerminalView, GivenLiveTargetsAddedOutOfOrder_WhenRendered_ThenTheSnapshotI
 {
     TargetProjection projection;
     DroneProjection drones;
+    OutcomeProjection outcomes{projection, drones};
     ASSERT_EQ(projection.onTargetTrack(
                   TargetTrack{TargetId{2}, Position{-20.0, 21.1, 22.5}, Timestamp{2'000ms}}),
               drone::console::TargetUpdateResult::added);
@@ -83,7 +94,7 @@ TEST(TerminalView, GivenLiveTargetsAddedOutOfOrder_WhenRendered_ThenTheSnapshotI
     std::ostringstream output;
     TerminalView view{output};
 
-    view.render(projection, drones);
+    view.render(projection, drones, outcomes);
 
     EXPECT_EQ(output.str(), "Targets (2)\n"
                             "ID | X (m) | Y (m) | Z (m) | Measured (ms)\n"
@@ -91,6 +102,9 @@ TEST(TerminalView, GivenLiveTargetsAddedOutOfOrder_WhenRendered_ThenTheSnapshotI
                             "2 | -20.00 | 21.10 | 22.50 | 2000\n\n"
                             "Drones (0)\n"
                             "ID | X (m) | Y (m) | Z (m) | Status | Target | Reported (ms)\n"
+                            "<none>\n\n"
+                            "Interception outcomes (0)\n"
+                            "Event | Drone | Target | X (m) | Y (m) | Z (m) | Occurred (ms)\n"
                             "<none>\n\n");
 }
 
@@ -98,6 +112,7 @@ TEST(TerminalView, GivenLiveDroneStates_WhenRendered_ThenLifecycleAndAssignmentA
 {
     TargetProjection targets;
     DroneProjection drones;
+    OutcomeProjection outcomes{targets, drones};
     ASSERT_EQ(
         drones.onDroneState(DroneState{DroneId{2}, Position{-2.0, 4.5, 8.25}, Timestamp{2'000ms},
                                        DroneStatus::assigned, TargetId{7}}),
@@ -109,7 +124,7 @@ TEST(TerminalView, GivenLiveDroneStates_WhenRendered_ThenLifecycleAndAssignmentA
     std::ostringstream output;
     TerminalView view{output};
 
-    view.render(targets, drones);
+    view.render(targets, drones, outcomes);
 
     EXPECT_EQ(output.str(), "Targets (0)\n"
                             "ID | X (m) | Y (m) | Z (m) | Measured (ms)\n"
@@ -117,7 +132,36 @@ TEST(TerminalView, GivenLiveDroneStates_WhenRendered_ThenLifecycleAndAssignmentA
                             "Drones (2)\n"
                             "ID | X (m) | Y (m) | Z (m) | Status | Target | Reported (ms)\n"
                             "1 | 0.00 | 0.00 | 0.00 | available | - | 1000\n"
-                            "2 | -2.00 | 4.50 | 8.25 | assigned | 7 | 2000\n\n");
+                            "2 | -2.00 | 4.50 | 8.25 | assigned | 7 | 2000\n\n"
+                            "Interception outcomes (0)\n"
+                            "Event | Drone | Target | X (m) | Y (m) | Z (m) | Occurred (ms)\n"
+                            "<none>\n\n");
+}
+
+TEST(TerminalView, GivenACorrelatedInterceptionOutcome_WhenRendered_ThenItsFactsAreReadable)
+{
+    TargetProjection targets;
+    DroneProjection drones;
+    ASSERT_EQ(targets.onTargetTrack(
+                  TargetTrack{TargetId{42}, Position{10.0, 20.0, 30.0}, Timestamp{1'000ms}}),
+              drone::console::TargetUpdateResult::added);
+    ASSERT_EQ(
+        drones.onDroneState(DroneState{DroneId{7}, Position{10.0, 20.0, 30.0}, Timestamp{2'000ms},
+                                       DroneStatus::interceptionSucceeded, TargetId{42}}),
+        drone::console::DroneUpdateResult::added);
+    OutcomeProjection outcomes{targets, drones};
+    ASSERT_EQ(
+        outcomes.onExplosionEvent(ExplosionEvent{ExplosionEventId{101}, DroneId{7}, TargetId{42},
+                                                 Position{10.0, 20.0, 30.0}, Timestamp{2'000ms}}),
+        drone::console::OutcomeUpdateResult::recorded);
+    std::ostringstream output;
+    TerminalView view{output};
+
+    view.render(targets, drones, outcomes);
+
+    EXPECT_NE(output.str().find("Interception outcomes (1)\n"), std::string::npos);
+    EXPECT_NE(output.str().find("101 | 7 | 42 | 10.00 | 20.00 | 30.00 | 2000\n"),
+              std::string::npos);
 }
 
 TEST(TerminalAction, GivenAnAssignedDrone_WhenStartActionIsEntered_ThenCoreEmitsTheCommand)

@@ -1,9 +1,11 @@
 #include "drone/console_core/assignment_use_case.h"
 #include "drone/console_core/drone_projection.h"
 #include "drone/console_core/interception_command_use_case.h"
+#include "drone/console_core/outcome_projection.h"
 #include "drone/console_core/target_projection.h"
 #include "drone/console_dds_adapter/assignment_publisher.h"
 #include "drone/console_dds_adapter/console_subscriber.h"
+#include "drone/console_dds_adapter/explosion_event_subscriber.h"
 #include "drone/console_dds_adapter/interception_command_publisher.h"
 #include "drone/console_ui_adapter/terminal_view.h"
 #include "drone/domain/drone_id.h"
@@ -41,6 +43,13 @@ struct AutomatedPursuitState final
 {
     bool assignmentSent{false};
     bool startSent{false};
+};
+
+struct ConsoleModel final
+{
+    drone::console::TargetProjection targets;
+    drone::console::DroneProjection drones;
+    drone::console::OutcomeProjection outcomes{targets, drones};
 };
 
 [[nodiscard]] Configuration parseConfiguration(const std::span<const char *const> arguments)
@@ -112,6 +121,51 @@ void reportDroneResult(const drone::console_dds::DroneStateReceiveResult &receiv
     }
 }
 
+void reportOutcomeResult(const drone::console_dds::ExplosionEventReceiveResult &received)
+{
+    if (!received.has_value() &&
+        received.error() != drone::console_dds::ExplosionEventReceiveIssue::timedOut)
+    {
+        std::cerr << "console: ExplosionEvent receive failed\n";
+    }
+}
+
+void receiveTarget(drone::console_dds::ConsoleSubscriber &subscriber,
+                   const drone::console_ui::TerminalView &view, ConsoleModel &model)
+{
+    const auto received = subscriber.receiveNextTarget(receiveTimeout);
+    if (received.has_value())
+    {
+        view.render(model.targets, model.drones, model.outcomes);
+        return;
+    }
+    reportTargetResult(received);
+}
+
+void receiveDrone(drone::console_dds::ConsoleSubscriber &subscriber,
+                  const drone::console_ui::TerminalView &view, ConsoleModel &model)
+{
+    const auto received = subscriber.receiveNextDrone(receiveTimeout);
+    if (received.has_value())
+    {
+        view.render(model.targets, model.drones, model.outcomes);
+        return;
+    }
+    reportDroneResult(received);
+}
+
+void receiveOutcome(drone::console_dds::ExplosionEventSubscriber &subscriber,
+                    const drone::console_ui::TerminalView &view, ConsoleModel &model)
+{
+    const auto received = subscriber.receiveNext(receiveTimeout);
+    if (received.has_value())
+    {
+        view.render(model.targets, model.drones, model.outcomes);
+        return;
+    }
+    reportOutcomeResult(received);
+}
+
 void automatePursuit(const bool assignmentReaderMatched, const bool commandReaderMatched,
                      drone::console::AssignmentUseCase &assignment,
                      drone::console::InterceptionCommandUseCase &command,
@@ -136,24 +190,26 @@ void automatePursuit(const bool assignmentReaderMatched, const bool commandReade
 
 void run(const Configuration &configuration)
 {
-    drone::console::TargetProjection projection;
-    drone::console::DroneProjection drones;
+    ConsoleModel model;
     drone::console_dds::ConsoleSubscriber subscriber{configuration.domainId, "drone_console",
-                                                     projection, drones};
+                                                     model.targets, model.drones};
+    drone::console_dds::ExplosionEventSubscriber outcomeSubscriber{
+        configuration.domainId, "drone_console_explosion_reader", model.outcomes};
     drone::console_dds::AssignmentPublisher assignmentPublisher{configuration.domainId,
                                                                 "drone_console_assignment_writer"};
     drone::console_dds::InterceptionCommandPublisher commandPublisher{
         configuration.domainId, "drone_console_command_writer"};
-    drone::console::AssignmentUseCase assignment{projection, drones, assignmentPublisher};
-    drone::console::InterceptionCommandUseCase command{drones, commandPublisher};
+    drone::console::AssignmentUseCase assignment{model.targets, model.drones, assignmentPublisher};
+    drone::console::InterceptionCommandUseCase command{model.drones, commandPublisher};
     const drone::console_ui::TerminalView view{std::cout};
 
     std::cout << "console: readers ready for targets and drones in DDS domain "
               << configuration.domainId << '\n';
-    view.render(projection, drones);
+    view.render(model.targets, model.drones, model.outcomes);
 
     bool targetWriterMatched{false};
     bool droneWriterMatched{false};
+    bool eventWriterMatched{false};
     bool assignmentReaderMatched{false};
     bool commandReaderMatched{false};
     AutomatedPursuitState automation;
@@ -169,6 +225,11 @@ void run(const Configuration &configuration)
             droneWriterMatched = true;
             std::cout << "console: matched interceptor DroneState writer\n" << std::flush;
         }
+        if (!eventWriterMatched && outcomeSubscriber.waitForWriterMatch(0ms))
+        {
+            eventWriterMatched = true;
+            std::cout << "console: matched interceptor ExplosionEvent writer\n" << std::flush;
+        }
         if (!assignmentReaderMatched && assignmentPublisher.waitForInterceptorMatch(0ms))
         {
             assignmentReaderMatched = true;
@@ -178,25 +239,9 @@ void run(const Configuration &configuration)
             commandReaderMatched = true;
         }
 
-        const auto target = subscriber.receiveNextTarget(receiveTimeout);
-        if (target.has_value())
-        {
-            view.render(projection, drones);
-        }
-        else
-        {
-            reportTargetResult(target);
-        }
-
-        const auto drone = subscriber.receiveNextDrone(receiveTimeout);
-        if (drone.has_value())
-        {
-            view.render(projection, drones);
-        }
-        else
-        {
-            reportDroneResult(drone);
-        }
+        receiveTarget(subscriber, view, model);
+        receiveDrone(subscriber, view, model);
+        receiveOutcome(outcomeSubscriber, view, model);
 
         if (configuration.automatePursuit)
         {

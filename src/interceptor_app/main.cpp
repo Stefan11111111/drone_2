@@ -5,6 +5,7 @@
 #include "drone/interceptor_core/interceptor_state_machine.h"
 #include "drone/interceptor_dds_adapter/assignment_subscriber.h"
 #include "drone/interceptor_dds_adapter/drone_state_publisher.h"
+#include "drone/interceptor_dds_adapter/explosion_event_publisher.h"
 #include "drone/interceptor_dds_adapter/interception_command_subscriber.h"
 #include "drone/interceptor_dds_adapter/target_track_subscriber.h"
 #include "drone/simulated_vehicle_adapter/simulated_vehicle.h"
@@ -60,12 +61,19 @@ constexpr auto controlInterval{100ms};
 void run(const std::uint32_t domainId)
 {
     drone::interceptor_dds::DroneStatePublisher statePublisher{domainId, "drone_interceptor_1"};
+    drone::interceptor_dds::ExplosionEventPublisher eventPublisher{
+        domainId, "drone_interceptor_explosion_writer"};
     drone::simulated_vehicle::SimulatedVehicle vehicle{
         {.initialPosition = drone::domain::Position{0.0, 0.0, 0.0},
          .startsAt = drone::domain::Timestamp{0ms},
          .maximumSpeedMetersPerSecond = 50.0}};
-    drone::interceptor::InterceptorStateMachine stateMachine{drone::domain::DroneId{1}, vehicle,
-                                                             vehicle, statePublisher};
+    drone::interceptor::InterceptorStateMachine stateMachine{
+        {.droneId = drone::domain::DroneId{1}, .arrivalToleranceMeters = 0.25},
+        vehicle,
+        vehicle,
+        vehicle,
+        statePublisher,
+        eventPublisher};
     drone::interceptor_dds::AssignmentSubscriber assignmentSubscriber{
         domainId, "drone_interceptor_assignment_reader", stateMachine};
     drone::interceptor_dds::InterceptionCommandSubscriber commandSubscriber{

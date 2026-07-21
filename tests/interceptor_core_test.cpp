@@ -3,6 +3,8 @@
 #include "drone/domain/assignment.h"
 #include "drone/domain/drone_id.h"
 #include "drone/domain/drone_state.h"
+#include "drone/domain/explosion_event.h"
+#include "drone/domain/explosion_event_id.h"
 #include "drone/domain/interception_command.h"
 #include "drone/domain/interception_command_id.h"
 #include "drone/domain/position.h"
@@ -10,10 +12,14 @@
 #include "drone/domain/target_track.h"
 #include "drone/domain/timestamp.h"
 #include "drone/interceptor_core/drone_state_output_port.h"
+#include "drone/interceptor_core/explosion_event_output_port.h"
 #include "drone/interceptor_core/flight_control_port.h"
+#include "drone/interceptor_core/interception_effect_port.h"
 #include "drone/interceptor_core/positioning_port.h"
 
 #include <chrono>
+#include <cstddef>
+#include <limits>
 #include <optional>
 #include <stdexcept>
 #include <vector>
@@ -27,6 +33,8 @@ using drone::domain::Assignment;
 using drone::domain::DroneId;
 using drone::domain::DroneState;
 using drone::domain::DroneStatus;
+using drone::domain::ExplosionEvent;
+using drone::domain::ExplosionEventId;
 using drone::domain::InterceptionCommand;
 using drone::domain::InterceptionCommandId;
 using drone::domain::Position;
@@ -35,7 +43,10 @@ using drone::domain::TargetTrack;
 using drone::domain::Timestamp;
 using drone::interceptor::AssignmentHandlingResult;
 using drone::interceptor::DroneStateOutputPort;
+using drone::interceptor::ExplosionEventOutputPort;
 using drone::interceptor::FlightControlPort;
+using drone::interceptor::InterceptionEffectPort;
+using drone::interceptor::InterceptionEffectResult;
 using drone::interceptor::InterceptionStartResult;
 using drone::interceptor::InterceptionTickResult;
 using drone::interceptor::InterceptorStateMachine;
@@ -56,7 +67,7 @@ class FixedPositioning final : public PositioningPort
                           .measuredAt = Timestamp{2'000ms}};
 };
 
-class CapturingFlightControl final : public FlightControlPort
+class CapturingFlightControl final : public FlightControlPort, public InterceptionEffectPort
 {
   public:
     void moveToward(const Position &destination, const Timestamp::Duration timeStep) override
@@ -65,11 +76,19 @@ class CapturingFlightControl final : public FlightControlPort
         timeSteps.push_back(timeStep);
     }
 
+    [[nodiscard]] InterceptionEffectResult trigger() override
+    {
+        ++effectTriggerCount;
+        return effectResult;
+    }
+
     std::vector<Position> destinations;
     std::vector<Timestamp::Duration> timeSteps;
+    InterceptionEffectResult effectResult{InterceptionEffectResult::succeeded};
+    std::size_t effectTriggerCount{};
 };
 
-class CapturingStateOutput final : public DroneStateOutputPort
+class CapturingStateOutput final : public DroneStateOutputPort, public ExplosionEventOutputPort
 {
   public:
     void publish(const DroneState &state) override
@@ -77,7 +96,13 @@ class CapturingStateOutput final : public DroneStateOutputPort
         publishedStates.push_back(state);
     }
 
+    void publish(const ExplosionEvent &event) override
+    {
+        publishedEvents.push_back(event);
+    }
+
     std::vector<DroneState> publishedStates;
+    std::vector<ExplosionEvent> publishedEvents;
 };
 
 TEST(InterceptorCore, GivenAnUnstartedInterceptor_WhenStarted_ThenItReportsItsCurrentAvailableState)
@@ -85,7 +110,12 @@ TEST(InterceptorCore, GivenAnUnstartedInterceptor_WhenStarted_ThenItReportsItsCu
     FixedPositioning positioning;
     CapturingFlightControl flightControl;
     CapturingStateOutput output;
-    InterceptorStateMachine interceptor{DroneId{7}, positioning, flightControl, output};
+    InterceptorStateMachine interceptor{{.droneId = DroneId{7}, .arrivalToleranceMeters = 0.25},
+                                        positioning,
+                                        flightControl,
+                                        flightControl,
+                                        output,
+                                        output};
     EXPECT_FALSE(interceptor.state().has_value());
 
     interceptor.start();
@@ -103,7 +133,12 @@ TEST(InterceptorCore,
     FixedPositioning positioning;
     CapturingFlightControl flightControl;
     CapturingStateOutput output;
-    InterceptorStateMachine interceptor{DroneId{7}, positioning, flightControl, output};
+    InterceptorStateMachine interceptor{{.droneId = DroneId{7}, .arrivalToleranceMeters = 0.25},
+                                        positioning,
+                                        flightControl,
+                                        flightControl,
+                                        output,
+                                        output};
     interceptor.start();
 
     EXPECT_THROW(interceptor.start(), std::logic_error);
@@ -117,7 +152,12 @@ TEST(InterceptorCore, GivenAnAssignmentForAnotherDrone_WhenHandled_ThenStateDoes
     FixedPositioning positioning;
     CapturingFlightControl flightControl;
     CapturingStateOutput output;
-    InterceptorStateMachine interceptor{DroneId{7}, positioning, flightControl, output};
+    InterceptorStateMachine interceptor{{.droneId = DroneId{7}, .arrivalToleranceMeters = 0.25},
+                                        positioning,
+                                        flightControl,
+                                        flightControl,
+                                        output,
+                                        output};
     interceptor.start();
 
     EXPECT_EQ(interceptor.onAssignment(Assignment{DroneId{8}, TargetId{42}}),
@@ -133,7 +173,12 @@ TEST(InterceptorCore,
     FixedPositioning positioning;
     CapturingFlightControl flightControl;
     CapturingStateOutput output;
-    InterceptorStateMachine interceptor{DroneId{7}, positioning, flightControl, output};
+    InterceptorStateMachine interceptor{{.droneId = DroneId{7}, .arrivalToleranceMeters = 0.25},
+                                        positioning,
+                                        flightControl,
+                                        flightControl,
+                                        output,
+                                        output};
     interceptor.start();
     positioning.sample = {.position = Position{13.0, -4.0, 121.0},
                           .measuredAt = Timestamp{2'100ms}};
@@ -154,7 +199,12 @@ TEST(InterceptorCore, GivenTheCurrentAssignmentAgain_WhenHandled_ThenItIsIgnored
     FixedPositioning positioning;
     CapturingFlightControl flightControl;
     CapturingStateOutput output;
-    InterceptorStateMachine interceptor{DroneId{7}, positioning, flightControl, output};
+    InterceptorStateMachine interceptor{{.droneId = DroneId{7}, .arrivalToleranceMeters = 0.25},
+                                        positioning,
+                                        flightControl,
+                                        flightControl,
+                                        output,
+                                        output};
     interceptor.start();
     ASSERT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{42}}),
               AssignmentHandlingResult::applied);
@@ -172,7 +222,12 @@ TEST(InterceptorCore,
     FixedPositioning positioning;
     CapturingFlightControl flightControl;
     CapturingStateOutput output;
-    InterceptorStateMachine interceptor{DroneId{7}, positioning, flightControl, output};
+    InterceptorStateMachine interceptor{{.droneId = DroneId{7}, .arrivalToleranceMeters = 0.25},
+                                        positioning,
+                                        flightControl,
+                                        flightControl,
+                                        output,
+                                        output};
     interceptor.start();
     ASSERT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{42}}),
               AssignmentHandlingResult::applied);
@@ -190,7 +245,12 @@ TEST(InterceptorCore,
     FixedPositioning positioning;
     CapturingFlightControl flightControl;
     CapturingStateOutput output;
-    InterceptorStateMachine interceptor{DroneId{7}, positioning, flightControl, output};
+    InterceptorStateMachine interceptor{{.droneId = DroneId{7}, .arrivalToleranceMeters = 0.25},
+                                        positioning,
+                                        flightControl,
+                                        flightControl,
+                                        output,
+                                        output};
     interceptor.start();
     ASSERT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{42}}),
               AssignmentHandlingResult::applied);
@@ -222,7 +282,12 @@ TEST(InterceptorCore, GivenInvalidStartCommands_WhenHandled_ThenInterceptorRemai
     FixedPositioning positioning;
     CapturingFlightControl flightControl;
     CapturingStateOutput output;
-    InterceptorStateMachine interceptor{DroneId{7}, positioning, flightControl, output};
+    InterceptorStateMachine interceptor{{.droneId = DroneId{7}, .arrivalToleranceMeters = 0.25},
+                                        positioning,
+                                        flightControl,
+                                        flightControl,
+                                        output,
+                                        output};
     const InterceptionCommand correct{InterceptionCommandId{101}, DroneId{7}, TargetId{42}};
 
     EXPECT_EQ(interceptor.startInterception(correct), InterceptionStartResult::notAssigned);
@@ -247,7 +312,12 @@ TEST(InterceptorCore,
     FixedPositioning positioning;
     CapturingFlightControl flightControl;
     CapturingStateOutput output;
-    InterceptorStateMachine interceptor{DroneId{7}, positioning, flightControl, output};
+    InterceptorStateMachine interceptor{{.droneId = DroneId{7}, .arrivalToleranceMeters = 0.25},
+                                        positioning,
+                                        flightControl,
+                                        flightControl,
+                                        output,
+                                        output};
     interceptor.start();
     ASSERT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{42}}),
               AssignmentHandlingResult::applied);
@@ -268,7 +338,12 @@ TEST(InterceptorCore, GivenAnInterceptingDrone_WhenTicked_ThenItMovesAndReportsC
     FixedPositioning positioning;
     CapturingFlightControl flightControl;
     CapturingStateOutput output;
-    InterceptorStateMachine interceptor{DroneId{7}, positioning, flightControl, output};
+    InterceptorStateMachine interceptor{{.droneId = DroneId{7}, .arrivalToleranceMeters = 0.25},
+                                        positioning,
+                                        flightControl,
+                                        flightControl,
+                                        output,
+                                        output};
     interceptor.start();
     ASSERT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{42}}),
               AssignmentHandlingResult::applied);
@@ -289,6 +364,7 @@ TEST(InterceptorCore, GivenAnInterceptingDrone_WhenTicked_ThenItMovesAndReportsC
                               TargetId{42}};
     EXPECT_EQ(interceptor.state(), std::optional{expected});
     EXPECT_EQ(output.publishedStates.back(), expected);
+    EXPECT_EQ(flightControl.effectTriggerCount, 0U);
 }
 
 TEST(InterceptorCore, GivenANewerTargetDuringPursuit_WhenTickedAgain_ThenItChangesDestination)
@@ -296,7 +372,12 @@ TEST(InterceptorCore, GivenANewerTargetDuringPursuit_WhenTickedAgain_ThenItChang
     FixedPositioning positioning;
     CapturingFlightControl flightControl;
     CapturingStateOutput output;
-    InterceptorStateMachine interceptor{DroneId{7}, positioning, flightControl, output};
+    InterceptorStateMachine interceptor{{.droneId = DroneId{7}, .arrivalToleranceMeters = 0.25},
+                                        positioning,
+                                        flightControl,
+                                        flightControl,
+                                        output,
+                                        output};
     interceptor.start();
     ASSERT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{42}}),
               AssignmentHandlingResult::applied);
@@ -315,6 +396,101 @@ TEST(InterceptorCore, GivenANewerTargetDuringPursuit_WhenTickedAgain_ThenItChang
 
     EXPECT_EQ(flightControl.destinations, (std::vector{initial.position(), retargeted.position()}));
     EXPECT_EQ(output.publishedStates.back().reportedAt(), Timestamp{2'200ms});
+    EXPECT_EQ(flightControl.effectTriggerCount, 0U);
+}
+
+TEST(InterceptorCore,
+     GivenAnInterceptingDroneWithinArrivalTolerance_WhenTickedRepeatedly_ThenEffectTriggersOnce)
+{
+    FixedPositioning positioning;
+    CapturingFlightControl flightControl;
+    CapturingStateOutput output;
+    InterceptorStateMachine interceptor{{.droneId = DroneId{7}, .arrivalToleranceMeters = 0.25},
+                                        positioning,
+                                        flightControl,
+                                        flightControl,
+                                        output,
+                                        output};
+    interceptor.start();
+    ASSERT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{42}}),
+              AssignmentHandlingResult::applied);
+    const TargetTrack target{TargetId{42}, Position{10.0, 20.0, 30.0}, Timestamp{3'000ms}};
+    ASSERT_EQ(interceptor.onTargetTrack(target), TargetTrackHandlingResult::accepted);
+    ASSERT_EQ(interceptor.startInterception(
+                  InterceptionCommand{InterceptionCommandId{101}, DroneId{7}, TargetId{42}}),
+              InterceptionStartResult::started);
+    positioning.sample = {.position = Position{10.1, 20.1, 30.1}, .measuredAt = Timestamp{2'200ms}};
+
+    EXPECT_EQ(interceptor.tick(100ms), InterceptionTickResult::effectSucceeded);
+
+    const DroneState succeeded{DroneId{7}, positioning.sample.position,
+                               positioning.sample.measuredAt, DroneStatus::interceptionSucceeded,
+                               TargetId{42}};
+    EXPECT_EQ(interceptor.state(), std::optional{succeeded});
+    EXPECT_EQ(flightControl.effectTriggerCount, 1U);
+    const ExplosionEvent expectedEvent{ExplosionEventId{101}, DroneId{7}, TargetId{42},
+                                       positioning.sample.position, positioning.sample.measuredAt};
+    EXPECT_EQ(output.publishedEvents, (std::vector{expectedEvent}));
+    EXPECT_EQ(interceptor.tick(100ms), InterceptionTickResult::notIntercepting);
+    EXPECT_EQ(flightControl.effectTriggerCount, 1U);
+    EXPECT_EQ(output.publishedEvents, (std::vector{expectedEvent}));
+}
+
+TEST(InterceptorCore, GivenTheInterceptionEffectFails_WhenArrivalIsDetected_ThenFailureIsFinal)
+{
+    FixedPositioning positioning;
+    CapturingFlightControl flightControl;
+    flightControl.effectResult = InterceptionEffectResult::failed;
+    CapturingStateOutput output;
+    InterceptorStateMachine interceptor{{.droneId = DroneId{7}, .arrivalToleranceMeters = 0.25},
+                                        positioning,
+                                        flightControl,
+                                        flightControl,
+                                        output,
+                                        output};
+    interceptor.start();
+    ASSERT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{42}}),
+              AssignmentHandlingResult::applied);
+    const TargetTrack target{TargetId{42}, positioning.sample.position, Timestamp{3'000ms}};
+    ASSERT_EQ(interceptor.onTargetTrack(target), TargetTrackHandlingResult::accepted);
+    ASSERT_EQ(interceptor.startInterception(
+                  InterceptionCommand{InterceptionCommandId{101}, DroneId{7}, TargetId{42}}),
+              InterceptionStartResult::started);
+
+    EXPECT_EQ(interceptor.tick(100ms), InterceptionTickResult::effectFailed);
+
+    const DroneState failed{DroneId{7}, positioning.sample.position, positioning.sample.measuredAt,
+                            DroneStatus::interceptionFailed, TargetId{42}};
+    EXPECT_EQ(interceptor.state(), std::optional{failed});
+    EXPECT_EQ(flightControl.effectTriggerCount, 1U);
+    EXPECT_TRUE(output.publishedEvents.empty());
+    EXPECT_EQ(interceptor.tick(100ms), InterceptionTickResult::notIntercepting);
+    EXPECT_EQ(flightControl.effectTriggerCount, 1U);
+    EXPECT_TRUE(output.publishedEvents.empty());
+}
+
+TEST(InterceptorCore, GivenAnInvalidArrivalTolerance_WhenConstructed_ThenItIsRejected)
+{
+    FixedPositioning positioning;
+    CapturingFlightControl flightControl;
+    CapturingStateOutput output;
+
+    EXPECT_THROW((InterceptorStateMachine{{.droneId = DroneId{7}, .arrivalToleranceMeters = -0.01},
+                                          positioning,
+                                          flightControl,
+                                          flightControl,
+                                          output,
+                                          output}),
+                 std::invalid_argument);
+    EXPECT_THROW((InterceptorStateMachine{
+                     {.droneId = DroneId{7},
+                      .arrivalToleranceMeters = std::numeric_limits<double>::infinity()},
+                     positioning,
+                     flightControl,
+                     flightControl,
+                     output,
+                     output}),
+                 std::invalid_argument);
 }
 
 } // namespace

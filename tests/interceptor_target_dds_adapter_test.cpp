@@ -3,12 +3,15 @@
 #include "drone/domain/assignment.h"
 #include "drone/domain/drone_id.h"
 #include "drone/domain/drone_state.h"
+#include "drone/domain/explosion_event.h"
 #include "drone/domain/position.h"
 #include "drone/domain/target_id.h"
 #include "drone/domain/target_track.h"
 #include "drone/domain/timestamp.h"
 #include "drone/interceptor_core/drone_state_output_port.h"
+#include "drone/interceptor_core/explosion_event_output_port.h"
 #include "drone/interceptor_core/flight_control_port.h"
+#include "drone/interceptor_core/interception_effect_port.h"
 #include "drone/interceptor_core/interceptor_state_machine.h"
 #include "drone/interceptor_core/positioning_port.h"
 #include "drone/interceptor_core/target_track_input_port.h"
@@ -29,12 +32,16 @@ using drone::dds_transport::TargetTrackWriter;
 using drone::domain::Assignment;
 using drone::domain::DroneId;
 using drone::domain::DroneState;
+using drone::domain::ExplosionEvent;
 using drone::domain::Position;
 using drone::domain::TargetId;
 using drone::domain::TargetTrack;
 using drone::domain::Timestamp;
 using drone::interceptor::DroneStateOutputPort;
+using drone::interceptor::ExplosionEventOutputPort;
 using drone::interceptor::FlightControlPort;
+using drone::interceptor::InterceptionEffectPort;
+using drone::interceptor::InterceptionEffectResult;
 using drone::interceptor::InterceptorStateMachine;
 using drone::interceptor::PositioningPort;
 using drone::interceptor::PositionSample;
@@ -56,7 +63,7 @@ class FixedPositioning final : public PositioningPort
     }
 };
 
-class CapturingFlightControl final : public FlightControlPort
+class CapturingFlightControl final : public FlightControlPort, public InterceptionEffectPort
 {
   public:
     void moveToward(const Position &destination, const Timestamp::Duration timeStep) override
@@ -65,16 +72,26 @@ class CapturingFlightControl final : public FlightControlPort
         timeSteps.push_back(timeStep);
     }
 
+    [[nodiscard]] InterceptionEffectResult trigger() override
+    {
+        return InterceptionEffectResult::succeeded;
+    }
+
     std::vector<Position> destinations;
     std::vector<Timestamp::Duration> timeSteps;
 };
 
-class IgnoringStateOutput final : public DroneStateOutputPort
+class IgnoringStateOutput final : public DroneStateOutputPort, public ExplosionEventOutputPort
 {
   public:
     void publish(const DroneState &state) override
     {
         static_cast<void>(state);
+    }
+
+    void publish(const ExplosionEvent &event) override
+    {
+        static_cast<void>(event);
     }
 };
 
@@ -84,7 +101,12 @@ TEST(InterceptorTargetDdsAdapter,
     FixedPositioning positioning;
     CapturingFlightControl flightControl;
     IgnoringStateOutput stateOutput;
-    InterceptorStateMachine interceptor{DroneId{7}, positioning, flightControl, stateOutput};
+    InterceptorStateMachine interceptor{{.droneId = DroneId{7}, .arrivalToleranceMeters = 0.25},
+                                        positioning,
+                                        flightControl,
+                                        flightControl,
+                                        stateOutput,
+                                        stateOutput};
     interceptor.start();
     ASSERT_EQ(interceptor.onAssignment(Assignment{DroneId{7}, TargetId{42}}),
               drone::interceptor::AssignmentHandlingResult::applied);

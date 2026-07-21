@@ -1,6 +1,7 @@
 #include "drone/console_core/assignment_use_case.h"
 #include "drone/console_core/drone_projection.h"
 #include "drone/console_core/interception_command_use_case.h"
+#include "drone/console_core/outcome_projection.h"
 #include "drone/console_core/target_projection.h"
 
 #include "drone/console_core/assignment_output_port.h"
@@ -10,6 +11,8 @@
 #include "drone/domain/assignment.h"
 #include "drone/domain/drone_id.h"
 #include "drone/domain/drone_state.h"
+#include "drone/domain/explosion_event.h"
+#include "drone/domain/explosion_event_id.h"
 #include "drone/domain/interception_command.h"
 #include "drone/domain/interception_command_id.h"
 #include "drone/domain/position.h"
@@ -34,6 +37,8 @@ using drone::console::DroneStateInputPort;
 using drone::console::DroneUpdateResult;
 using drone::console::InterceptionCommandOutputPort;
 using drone::console::InterceptionCommandUseCase;
+using drone::console::OutcomeProjection;
+using drone::console::OutcomeUpdateResult;
 using drone::console::StartInterceptionResult;
 using drone::console::TargetProjection;
 using drone::console::TargetTrackInputPort;
@@ -42,6 +47,8 @@ using drone::domain::Assignment;
 using drone::domain::DroneId;
 using drone::domain::DroneState;
 using drone::domain::DroneStatus;
+using drone::domain::ExplosionEvent;
+using drone::domain::ExplosionEventId;
 using drone::domain::InterceptionCommand;
 using drone::domain::InterceptionCommandId;
 using drone::domain::Position;
@@ -190,6 +197,54 @@ TEST(ConsoleCore,
     EXPECT_EQ(projection.onDroneState(stale), DroneUpdateResult::stale);
     EXPECT_EQ(projection.onDroneState(conflicting), DroneUpdateResult::conflicting);
     EXPECT_EQ(projection.latestDrone(DroneId{1}), newer);
+}
+
+TEST(ConsoleCore, GivenACorrelatedOutcome_WhenReceivedAgain_ThenItIsRecordedOnceByEventIdentity)
+{
+    TargetProjection targets;
+    DroneProjection drones;
+    ASSERT_EQ(targets.onTargetTrack(
+                  TargetTrack{TargetId{42}, Position{10.0, 20.0, 30.0}, Timestamp{1'000ms}}),
+              TargetUpdateResult::added);
+    ASSERT_EQ(
+        drones.onDroneState(DroneState{DroneId{7}, Position{10.0, 20.0, 30.0}, Timestamp{2'000ms},
+                                       DroneStatus::interceptionSucceeded, TargetId{42}}),
+        DroneUpdateResult::added);
+    OutcomeProjection outcomes{targets, drones};
+    const ExplosionEvent event{ExplosionEventId{101}, DroneId{7}, TargetId{42},
+                               Position{10.0, 20.0, 30.0}, Timestamp{2'000ms}};
+
+    EXPECT_EQ(outcomes.onExplosionEvent(event), OutcomeUpdateResult::recorded);
+    EXPECT_EQ(outcomes.onExplosionEvent(event), OutcomeUpdateResult::duplicate);
+    EXPECT_EQ(
+        outcomes.onExplosionEvent(ExplosionEvent{ExplosionEventId{101}, DroneId{7}, TargetId{42},
+                                                 Position{11.0, 20.0, 30.0}, Timestamp{2'000ms}}),
+        OutcomeUpdateResult::conflicting);
+    EXPECT_EQ(outcomes.outcomes(), (std::vector{event}));
+}
+
+TEST(ConsoleCore, GivenAnOutcomeWithoutMatchingProjectedSubjects_WhenReceived_ThenItIsUnrelated)
+{
+    TargetProjection targets;
+    DroneProjection drones;
+    ASSERT_EQ(targets.onTargetTrack(
+                  TargetTrack{TargetId{42}, Position{10.0, 20.0, 30.0}, Timestamp{1'000ms}}),
+              TargetUpdateResult::added);
+    ASSERT_EQ(
+        drones.onDroneState(DroneState{DroneId{7}, Position{10.0, 20.0, 30.0}, Timestamp{2'000ms},
+                                       DroneStatus::assigned, TargetId{42}}),
+        DroneUpdateResult::added);
+    OutcomeProjection outcomes{targets, drones};
+
+    EXPECT_EQ(
+        outcomes.onExplosionEvent(ExplosionEvent{ExplosionEventId{101}, DroneId{8}, TargetId{42},
+                                                 Position{10.0, 20.0, 30.0}, Timestamp{2'000ms}}),
+        OutcomeUpdateResult::unrelated);
+    EXPECT_EQ(
+        outcomes.onExplosionEvent(ExplosionEvent{ExplosionEventId{102}, DroneId{7}, TargetId{43},
+                                                 Position{10.0, 20.0, 30.0}, Timestamp{2'000ms}}),
+        OutcomeUpdateResult::unrelated);
+    EXPECT_TRUE(outcomes.outcomes().empty());
 }
 
 TEST(ConsoleCore, GivenAnUnknownDrone_WhenAssignmentIsRequested_ThenNothingIsEmitted)

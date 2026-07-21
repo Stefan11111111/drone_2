@@ -3,6 +3,7 @@
 #include "drone/domain/position.h"
 #include "drone/domain/timestamp.h"
 #include "drone/interceptor_core/flight_control_port.h"
+#include "drone/interceptor_core/interception_effect_port.h"
 #include "drone/interceptor_core/positioning_port.h"
 
 #include <chrono>
@@ -17,6 +18,8 @@ namespace
 using drone::domain::Position;
 using drone::domain::Timestamp;
 using drone::interceptor::FlightControlPort;
+using drone::interceptor::InterceptionEffectPort;
+using drone::interceptor::InterceptionEffectResult;
 using drone::interceptor::PositioningPort;
 using drone::interceptor::PositionSample;
 using drone::simulated_vehicle::Configuration;
@@ -100,6 +103,14 @@ TEST(SimulatedVehicle, GivenNoMovement_WhenSimulationTimeAdvances_ThenPositionRe
 
     EXPECT_EQ(vehicle.currentPosition(), (PositionSample{.position = Position{0.0, 0.0, 10.0},
                                                          .measuredAt = Timestamp{1'250ms}}));
+}
+
+TEST(SimulatedVehicle, GivenAnInterceptionEffectRequest_WhenTriggered_ThenTheSimulationSucceeds)
+{
+    SimulatedVehicle vehicle{vehicleConfiguration()};
+    InterceptionEffectPort &effect = vehicle;
+
+    EXPECT_EQ(effect.trigger(), InterceptionEffectResult::succeeded);
 }
 
 TEST(SimulatedVehicle, GivenInvalidSpeedOrTimeStep_WhenUsed_ThenItIsRejected)

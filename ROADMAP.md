@@ -409,7 +409,7 @@ the note into generic documentation or paste large source listings.
 
 ### 41 — Detect arrival and request the simulated effect
 
-- [ ] **AI prompt:** Complete roadmap step 41 only. Add an interception-effect output port and core
+- [x] **AI prompt:** Complete roadmap step 41 only. Add an interception-effect output port and core
   arrival logic that triggers exactly once when the drone reaches the current assigned target
   according to an explicit tolerance. Extend `simulated_vehicle_adapter` or add its cohesive effect
   implementation without putting simulation details in core. Add
@@ -419,7 +419,7 @@ the note into generic documentation or paste large source listings.
 
 ### 42 — Publish the explosion event
 
-- [ ] **AI prompt:** Complete roadmap step 42 only. Add the explosion-event DataWriter to the
+- [x] **AI prompt:** Complete roadmap step 42 only. Add the explosion-event DataWriter to the
   interceptor DDS adapter and connect the successful simulated effect outcome to it through the
   interceptor core's output boundary. Apply and test the catalog's event QoS. Add
   `docs/learning/42-explosion-publisher.md`, explaining the path from a local physical-effect result
@@ -428,7 +428,7 @@ the note into generic documentation or paste large source listings.
 
 ### 43 — Display the interception outcome
 
-- [ ] **AI prompt:** Complete roadmap step 43 only. Add the explosion-event DataReader to the console
+- [x] **AI prompt:** Complete roadmap step 43 only. Add the explosion-event DataReader to the console
   DDS adapter, correlate outcomes in console core, and render the result in the terminal UI. Cover
   duplicate, unrelated, and valid events at the appropriate boundaries. Add
   `docs/learning/43-console-outcome.md`, explaining event consumption, correlation, and the effect of
@@ -437,7 +437,7 @@ the note into generic documentation or paste large source listings.
 
 ### 44 — Prove the complete vision scenario
 
-- [ ] **AI prompt:** Complete roadmap step 44 only. Add one bounded end-to-end test that launches
+- [x] **AI prompt:** Complete roadmap step 44 only. Add one bounded end-to-end test that launches
   observer, console, and interceptor as separate processes; observes target and drone state;
   performs assignment and start actions; verifies pursuit; and ends when the correlated explosion
   appears on the console. Reuse existing test support rather than duplicating orchestration. Add
