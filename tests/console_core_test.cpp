@@ -1,8 +1,11 @@
+#include "drone/console_core/assignment_use_case.h"
 #include "drone/console_core/drone_projection.h"
 #include "drone/console_core/target_projection.h"
 
+#include "drone/console_core/assignment_output_port.h"
 #include "drone/console_core/drone_state_input_port.h"
 #include "drone/console_core/target_track_input_port.h"
+#include "drone/domain/assignment.h"
 #include "drone/domain/drone_id.h"
 #include "drone/domain/drone_state.h"
 #include "drone/domain/position.h"
@@ -19,12 +22,16 @@
 namespace
 {
 
+using drone::console::AssignmentOutputPort;
+using drone::console::AssignmentResult;
+using drone::console::AssignmentUseCase;
 using drone::console::DroneProjection;
 using drone::console::DroneStateInputPort;
 using drone::console::DroneUpdateResult;
 using drone::console::TargetProjection;
 using drone::console::TargetTrackInputPort;
 using drone::console::TargetUpdateResult;
+using drone::domain::Assignment;
 using drone::domain::DroneId;
 using drone::domain::DroneState;
 using drone::domain::DroneStatus;
@@ -33,6 +40,33 @@ using drone::domain::TargetId;
 using drone::domain::TargetTrack;
 using drone::domain::Timestamp;
 using namespace std::chrono_literals;
+
+class CapturingAssignmentOutput final : public AssignmentOutputPort
+{
+  public:
+    void publish(const Assignment &assignment) override
+    {
+        assignments.push_back(assignment);
+    }
+
+    std::vector<Assignment> assignments;
+};
+
+struct AssignmentFixture
+{
+    AssignmentFixture() : useCase{targets, drones, output}
+    {
+        targets.onTargetTrack(
+            TargetTrack{TargetId{42}, Position{10.0, 20.0, 30.0}, Timestamp{1'000ms}});
+        drones.onDroneState(DroneState{DroneId{7}, Position{0.0, 0.0, 0.0}, Timestamp{1'000ms},
+                                       DroneStatus::available, std::nullopt});
+    }
+
+    TargetProjection targets;
+    DroneProjection drones;
+    CapturingAssignmentOutput output;
+    AssignmentUseCase useCase;
+};
 
 TEST(ConsoleCore, GivenNewTargets_WhenAccepted_ThenTheirLatestStateIsProjectedByIdentifier)
 {
@@ -136,6 +170,51 @@ TEST(ConsoleCore,
     EXPECT_EQ(projection.onDroneState(stale), DroneUpdateResult::stale);
     EXPECT_EQ(projection.onDroneState(conflicting), DroneUpdateResult::conflicting);
     EXPECT_EQ(projection.latestDrone(DroneId{1}), newer);
+}
+
+TEST(ConsoleCore, GivenAnUnknownDrone_WhenAssignmentIsRequested_ThenNothingIsEmitted)
+{
+    AssignmentFixture fixture;
+
+    EXPECT_EQ(fixture.useCase.assign(DroneId{8}, TargetId{42}), AssignmentResult::unknownDrone);
+    EXPECT_TRUE(fixture.output.assignments.empty());
+}
+
+TEST(ConsoleCore, GivenAnUnknownTarget_WhenAssignmentIsRequested_ThenNothingIsEmitted)
+{
+    AssignmentFixture fixture;
+
+    EXPECT_EQ(fixture.useCase.assign(DroneId{7}, TargetId{43}), AssignmentResult::unknownTarget);
+    EXPECT_TRUE(fixture.output.assignments.empty());
+}
+
+TEST(ConsoleCore, GivenAnUnavailableDrone_WhenAssignmentIsRequested_ThenNothingIsEmitted)
+{
+    AssignmentFixture fixture;
+    ASSERT_EQ(fixture.drones.onDroneState(DroneState{DroneId{7}, Position{0.0, 0.0, 0.0},
+                                                     Timestamp{2'000ms}, DroneStatus::assigned,
+                                                     TargetId{42}}),
+              DroneUpdateResult::updated);
+
+    EXPECT_EQ(fixture.useCase.assign(DroneId{7}, TargetId{42}), AssignmentResult::unavailableDrone);
+    EXPECT_TRUE(fixture.output.assignments.empty());
+}
+
+TEST(ConsoleCore, GivenARepeatedValidSelection_WhenAssignmentIsRequested_ThenItIsEmittedOnce)
+{
+    AssignmentFixture fixture;
+    ASSERT_EQ(fixture.useCase.assign(DroneId{7}, TargetId{42}), AssignmentResult::assigned);
+
+    EXPECT_EQ(fixture.useCase.assign(DroneId{7}, TargetId{42}), AssignmentResult::duplicate);
+    EXPECT_EQ(fixture.output.assignments, (std::vector{Assignment{DroneId{7}, TargetId{42}}}));
+}
+
+TEST(ConsoleCore, GivenAnAvailableDroneAndKnownTarget_WhenAssigned_ThenOneAssignmentIsEmitted)
+{
+    AssignmentFixture fixture;
+
+    EXPECT_EQ(fixture.useCase.assign(DroneId{7}, TargetId{42}), AssignmentResult::assigned);
+    EXPECT_EQ(fixture.output.assignments, (std::vector{Assignment{DroneId{7}, TargetId{42}}}));
 }
 
 } // namespace

@@ -103,6 +103,7 @@ target_link_libraries(interceptor_core PUBLIC drone_domain)
 
 add_library(
   console_core
+  src/console_core/assignment_use_case.cpp
   src/console_core/drone_projection.cpp
   src/console_core/target_projection.cpp)
 target_include_directories(console_core PUBLIC include)

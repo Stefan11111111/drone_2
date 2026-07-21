@@ -336,7 +336,7 @@ the note into generic documentation or paste large source listings.
 
 ### 33 — Validate assignment in console core
 
-- [ ] **AI prompt:** Complete roadmap step 33 only. Add a console-core output port and validation use
+- [x] **AI prompt:** Complete roadmap step 33 only. Add a console-core output port and validation use
   case for assigning an available drone to a known target. Cover unknown, unavailable, duplicate,
   and valid selections with unit tests; add no DDS or terminal-input parsing. Add
   `docs/learning/33-assignment-use-case.md`, explaining why command validation precedes distributed
