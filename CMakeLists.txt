@@ -101,6 +101,10 @@ add_library(console_core src/console_core/target_projection.cpp)
 target_include_directories(console_core PUBLIC include)
 target_link_libraries(console_core PUBLIC drone_domain)
 
+add_library(console_ui_adapter src/console_ui_adapter/terminal_view.cpp)
+target_include_directories(console_ui_adapter PUBLIC include)
+target_link_libraries(console_ui_adapter PUBLIC console_core)
+
 add_library(simulated_radar_adapter src/simulated_radar_adapter/simulated_radar.cpp)
 target_include_directories(simulated_radar_adapter PUBLIC include)
 target_link_libraries(simulated_radar_adapter PUBLIC observer_core)
@@ -130,6 +134,10 @@ target_link_libraries(console_dds_adapter PUBLIC console_core drone_dds_transpor
 add_executable(observer src/observer_app/main.cpp)
 target_link_libraries(
   observer PRIVATE observer_core observer_dds_adapter simulated_radar_adapter)
+
+add_executable(console src/console_app/main.cpp)
+target_link_libraries(
+  console PRIVATE console_core console_dds_adapter console_ui_adapter)
 
 add_executable(verification_workflow_test tests/verification_workflow_test.cpp)
 target_link_libraries(verification_workflow_test PRIVATE GTest::gtest_main)
@@ -213,6 +221,11 @@ gtest_discover_tests(observer_core_test)
 add_executable(console_core_test tests/console_core_test.cpp)
 target_link_libraries(console_core_test PRIVATE GTest::gtest_main console_core)
 gtest_discover_tests(console_core_test)
+
+add_executable(console_ui_adapter_test tests/console_ui_adapter_test.cpp)
+target_link_libraries(
+  console_ui_adapter_test PRIVATE GTest::gtest_main console_ui_adapter)
+gtest_discover_tests(console_ui_adapter_test)
 
 add_executable(console_dds_adapter_test tests/console_dds_adapter_test.cpp)
 target_link_libraries(

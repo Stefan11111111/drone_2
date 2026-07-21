@@ -269,7 +269,7 @@ the note into generic documentation or paste large source listings.
 
 ### 26 — Display targets in a terminal console
 
-- [ ] **AI prompt:** Complete roadmap step 26 only. Implement the first `console_ui_adapter` as a
+- [x] **AI prompt:** Complete roadmap step 26 only. Implement the first `console_ui_adapter` as a
   replaceable terminal view and add the console composition executable. Render stable, readable
   snapshots of live target state without introducing operator commands yet. Add
   `docs/learning/26-terminal-view.md`, explaining why presentation remains outside DDS callbacks and
