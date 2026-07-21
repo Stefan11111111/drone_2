@@ -458,7 +458,7 @@ the note into generic documentation or paste large source listings.
 
 ### 46 — Turn QoS hypotheses into executable evidence
 
-- [ ] **AI prompt:** Complete roadmap step 46 only. Audit the topic catalog against the implemented
+- [x] **AI prompt:** Complete roadmap step 46 only. Audit the topic catalog against the implemented
   behavior and add focused integration experiments for the most important Reliability, Durability,
   History, and incompatible-QoS cases. Change policies only when evidence and scenario semantics
   require it; keep the tests deterministic. Add `docs/learning/46-qos-experiments.md`, showing how to
