@@ -289,7 +289,7 @@ the note into generic documentation or paste large source listings.
 
 ### 28 — Add the interceptor core state machine shell
 
-- [ ] **AI prompt:** Complete roadmap step 28 only. Create `interceptor_core` with explicit state,
+- [x] **AI prompt:** Complete roadmap step 28 only. Create `interceptor_core` with explicit state,
   positioning/flight-control ports, and a drone-state output port, but implement only startup in an
   available/idle state. Use test doubles and add no DDS or simulation code. Add
   `docs/learning/28-interceptor-state-machine.md`, explaining why a deterministic core state machine
