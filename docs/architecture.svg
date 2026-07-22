@@ -1,0 +1,574 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="2800"
+     height="2000"
+     viewBox="0 0 2800 2000"
+     role="img"
+     aria-labelledby="diagram-title diagram-description">
+  <title id="diagram-title">Drone interception production targets and communication APIs</title>
+  <desc id="diagram-description">
+    Two-panel architecture diagram. The upper panel shows in-process ports and five Fast DDS topic
+    flows among observer, console, and interceptor processes. The lower panel shows all sixteen
+    production CMake targets, their direct dependencies, and the principal APIs used at each
+    boundary.
+  </desc>
+
+  <defs>
+    <marker id="arrow-in-process" markerWidth="10" markerHeight="10" refX="9" refY="5"
+            orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#0f766e"/>
+    </marker>
+    <marker id="arrow-dds" markerWidth="10" markerHeight="10" refX="9" refY="5"
+            orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7c3aed"/>
+    </marker>
+    <marker id="arrow-dependency" markerWidth="10" markerHeight="10" refX="9" refY="5"
+            orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+    <marker id="arrow-composition" markerWidth="10" markerHeight="10" refX="9" refY="5"
+            orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1e40af"/>
+    </marker>
+
+    <style>
+      text {
+        fill: #0f172a;
+        font-family: "Segoe UI", Ubuntu, Arial, sans-serif;
+      }
+      .page-title { font-size: 42px; font-weight: 750; letter-spacing: -0.6px; }
+      .page-subtitle { fill: #475569; font-size: 20px; }
+      .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; }
+      .panel-title { font-size: 28px; font-weight: 750; }
+      .panel-subtitle { fill: #64748b; font-size: 17px; }
+      .cluster { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 1.5; }
+      .cluster-title { font-size: 20px; font-weight: 700; }
+      .cluster-subtitle { fill: #64748b; font-size: 14px; }
+      .node { stroke-width: 2; }
+      .node-executable { fill: #dbeafe; stroke: #1e40af; }
+      .node-core { fill: #dcfce7; stroke: #15803d; }
+      .node-adapter { fill: #ffedd5; stroke: #c2410c; }
+      .node-dds { fill: #ede9fe; stroke: #7c3aed; }
+      .node-shared { fill: #e2e8f0; stroke: #475569; }
+      .node-domain { fill: #ccfbf1; stroke: #0f766e; }
+      .node-external { fill: #fae8ff; stroke: #a21caf; stroke-dasharray: 9 6; }
+      .node-title { font-size: 18px; font-weight: 750; }
+      .node-kind { fill: #64748b; font-size: 13px; font-weight: 650; letter-spacing: 0.7px; }
+      .node-api { fill: #334155; font-size: 14px; }
+      .code {
+        font-family: "DejaVu Sans Mono", "Liberation Mono", Consolas, monospace;
+      }
+      .in-process {
+        fill: none;
+        stroke: #0f766e;
+        stroke-width: 2.5;
+        marker-end: url(#arrow-in-process);
+      }
+      .in-process-both {
+        fill: none;
+        stroke: #0f766e;
+        stroke-width: 2.5;
+        marker-start: url(#arrow-in-process);
+        marker-end: url(#arrow-in-process);
+      }
+      .composition {
+        fill: none;
+        stroke: #1e40af;
+        stroke-width: 1.8;
+        stroke-dasharray: 7 6;
+        marker-end: url(#arrow-composition);
+      }
+      .dds-flow {
+        fill: none;
+        stroke: #7c3aed;
+        stroke-width: 2.5;
+        marker-end: url(#arrow-dds);
+      }
+      .dependency {
+        fill: none;
+        stroke: #64748b;
+        stroke-width: 2;
+        marker-end: url(#arrow-dependency);
+      }
+      .dependency-bus { fill: none; stroke: #94a3b8; stroke-width: 2; }
+      .edge-label-bg { fill: #ffffff; stroke: #e2e8f0; stroke-width: 1; }
+      .edge-label { fill: #334155; font-size: 13px; }
+      .runtime-label { fill: #0f766e; font-size: 13px; font-weight: 650; }
+      .topic-band { fill: #f5f3ff; stroke: #a78bfa; stroke-width: 1.5; }
+      .topic-producer, .topic-consumer { fill: #ffffff; stroke: #c4b5fd; stroke-width: 1.2; }
+      .topic-contract { fill: #ede9fe; stroke: #7c3aed; stroke-width: 1.5; }
+      .topic-text { font-size: 14px; }
+      .topic-name { fill: #5b21b6; font-size: 15px; font-weight: 750; }
+      .legend-text { fill: #334155; font-size: 14px; }
+      .small-note { fill: #64748b; font-size: 13px; }
+    </style>
+  </defs>
+
+  <rect width="2800" height="2000" fill="#f1f5f9"/>
+
+  <!-- Header and legend -->
+  <text class="page-title" x="56" y="62">Drone interception — production targets &amp; communication APIs</text>
+  <text class="page-subtitle" x="56" y="96">
+    16 project targets · exact runtime topic contracts · direct CMake dependencies
+  </text>
+
+  <g id="legend" transform="translate(56 118)">
+    <rect class="node node-executable" x="0" y="0" width="34" height="22" rx="5"/>
+    <text class="legend-text" x="44" y="16">executable</text>
+    <rect class="node node-core" x="150" y="0" width="34" height="22" rx="5"/>
+    <text class="legend-text" x="194" y="16">core</text>
+    <rect class="node node-adapter" x="270" y="0" width="34" height="22" rx="5"/>
+    <text class="legend-text" x="314" y="16">UI / simulation adapter</text>
+    <rect class="node node-dds" x="510" y="0" width="34" height="22" rx="5"/>
+    <text class="legend-text" x="554" y="16">DDS adapter</text>
+    <rect class="node node-shared" x="690" y="0" width="34" height="22" rx="5"/>
+    <text class="legend-text" x="734" y="16">shared library</text>
+    <rect class="node node-domain" x="890" y="0" width="34" height="22" rx="5"/>
+    <text class="legend-text" x="934" y="16">domain</text>
+    <rect class="node node-external" x="1028" y="0" width="34" height="22" rx="5"/>
+    <text class="legend-text" x="1072" y="16">external middleware</text>
+
+    <path class="in-process" d="M 1300 11 H 1370"/>
+    <text class="legend-text" x="1383" y="16">in-process port call</text>
+    <path class="dds-flow" d="M 1580 11 H 1650"/>
+    <text class="legend-text" x="1663" y="16">DDS sample flow</text>
+    <path class="dependency" d="M 1835 11 H 1905"/>
+    <text class="legend-text" x="1918" y="16">consumer → direct dependency</text>
+    <path class="composition" d="M 2180 11 H 2250"/>
+    <text class="legend-text" x="2263" y="16">composition-root wiring</text>
+  </g>
+
+  <!-- Panel 1: runtime flow -->
+  <g id="runtime-panel">
+    <rect class="panel" x="40" y="165" width="2720" height="740" rx="18"/>
+    <text class="panel-title" x="72" y="207">1 · Runtime communication</text>
+    <text class="panel-subtitle" x="72" y="233">
+      Core work crosses explicit ports inside each process; every cross-process message crosses a Fast DDS Topic.
+    </text>
+
+    <!-- Observer process -->
+    <g id="runtime-observer">
+      <rect class="cluster" x="70" y="252" width="800" height="350" rx="14"/>
+      <text class="cluster-title code" x="94" y="284">observer</text>
+      <text class="cluster-subtitle" x="205" y="284">process · composition target</text>
+
+      <rect class="node node-executable" x="335" y="266" width="270" height="48" rx="9"/>
+      <text class="node-title code" x="470" y="296" text-anchor="middle">observer</text>
+
+      <path class="composition" d="M 470 314 V 332 H 212 V 340"/>
+      <path class="composition" d="M 470 332 V 340"/>
+      <path class="composition" d="M 470 332 H 720 V 340"/>
+
+      <rect class="node node-adapter" x="105" y="340" width="215" height="92" rx="10"/>
+      <text class="node-kind" x="212" y="363" text-anchor="middle">SIMULATION ADAPTER</text>
+      <text class="node-title code" x="212" y="390" text-anchor="middle">simulated_radar_adapter</text>
+      <text class="node-api code" x="212" y="415" text-anchor="middle">SimulatedRadar::tick()</text>
+
+      <rect class="node node-core" x="355" y="340" width="230" height="92" rx="10"/>
+      <text class="node-kind" x="470" y="363" text-anchor="middle">CORE</text>
+      <text class="node-title code" x="470" y="390" text-anchor="middle">observer_core</text>
+      <text class="node-api code" x="470" y="415" text-anchor="middle">TargetTracker</text>
+
+      <rect class="node node-dds" x="620" y="340" width="215" height="92" rx="10"/>
+      <text class="node-kind" x="727" y="363" text-anchor="middle">DDS ADAPTER</text>
+      <text class="node-title code" x="727" y="390" text-anchor="middle">observer_dds_adapter</text>
+      <text class="node-api code" x="727" y="415" text-anchor="middle">TargetTrackPublisher</text>
+
+      <path class="in-process" d="M 320 386 H 350"/>
+      <path class="in-process" d="M 585 386 H 615"/>
+
+      <rect class="edge-label-bg" x="102" y="454" width="274" height="58" rx="8"/>
+      <text class="runtime-label code" x="239" y="477" text-anchor="middle">DetectionInputPort</text>
+      <text class="edge-label code" x="239" y="498" text-anchor="middle">onDetection(Detection)</text>
+
+      <rect class="edge-label-bg" x="392" y="454" width="394" height="58" rx="8"/>
+      <text class="runtime-label code" x="589" y="477" text-anchor="middle">TargetTrackOutputPort</text>
+      <text class="edge-label code" x="589" y="498" text-anchor="middle">publish(domain::TargetTrack)</text>
+
+      <text class="small-note" x="470" y="548" text-anchor="middle">
+        The radar and DDS implementations can be replaced without changing observer_core.
+      </text>
+    </g>
+
+    <!-- Console process -->
+    <g id="runtime-console">
+      <rect class="cluster" x="1000" y="252" width="800" height="350" rx="14"/>
+      <text class="cluster-title code" x="1024" y="284">console</text>
+      <text class="cluster-subtitle" x="1120" y="284">process · composition target</text>
+
+      <rect class="node node-executable" x="1265" y="266" width="270" height="48" rx="9"/>
+      <text class="node-title code" x="1400" y="296" text-anchor="middle">console</text>
+
+      <path class="composition" d="M 1400 314 V 332 H 1112 V 340"/>
+      <path class="composition" d="M 1400 332 V 340"/>
+      <path class="composition" d="M 1400 332 H 1687 V 340"/>
+
+      <rect class="node node-adapter" x="1035" y="340" width="215" height="92" rx="10"/>
+      <text class="node-kind" x="1142" y="363" text-anchor="middle">UI ADAPTER</text>
+      <text class="node-title code" x="1142" y="390" text-anchor="middle">console_ui_adapter</text>
+      <text class="node-api code" x="1142" y="415" text-anchor="middle">TerminalView / Action</text>
+
+      <rect class="node node-core" x="1285" y="340" width="230" height="92" rx="10"/>
+      <text class="node-kind" x="1400" y="363" text-anchor="middle">CORE</text>
+      <text class="node-title code" x="1400" y="390" text-anchor="middle">console_core</text>
+      <text class="node-api code" x="1400" y="415" text-anchor="middle">Projections / UseCases</text>
+
+      <rect class="node node-dds" x="1550" y="340" width="215" height="92" rx="10"/>
+      <text class="node-kind" x="1657" y="363" text-anchor="middle">DDS ADAPTER</text>
+      <text class="node-title code" x="1657" y="390" text-anchor="middle">console_dds_adapter</text>
+      <text class="node-api code" x="1657" y="415" text-anchor="middle">Publishers / Subscribers</text>
+
+      <path class="in-process-both" d="M 1255 386 H 1280"/>
+      <path class="in-process-both" d="M 1520 386 H 1545"/>
+
+      <rect class="edge-label-bg" x="1028" y="448" width="355" height="90" rx="8"/>
+      <text class="runtime-label code" x="1205" y="471" text-anchor="middle">UI ↔ core</text>
+      <text class="edge-label code" x="1205" y="493" text-anchor="middle">TerminalView::render(projections)</text>
+      <text class="edge-label code" x="1205" y="514" text-anchor="middle">TerminalAction → InterceptionCommandUseCase</text>
+
+      <rect class="edge-label-bg" x="1400" y="448" width="367" height="90" rx="8"/>
+      <text class="runtime-label code" x="1583" y="471" text-anchor="middle">DDS ↔ core ports</text>
+      <text class="edge-label code" x="1583" y="493" text-anchor="middle">in: TargetTrack / DroneState / ExplosionEvent</text>
+      <text class="edge-label code" x="1583" y="514" text-anchor="middle">out: Assignment / InterceptionCommand</text>
+
+      <text class="small-note" x="1400" y="566" text-anchor="middle">
+        DDS receive results update projections on the console-owned polling loop.
+      </text>
+    </g>
+
+    <!-- Interceptor process -->
+    <g id="runtime-interceptor">
+      <rect class="cluster" x="1930" y="252" width="800" height="350" rx="14"/>
+      <text class="cluster-title code" x="1954" y="284">interceptor</text>
+      <text class="cluster-subtitle" x="2100" y="284">process · composition target</text>
+
+      <rect class="node node-executable" x="2195" y="266" width="270" height="48" rx="9"/>
+      <text class="node-title code" x="2330" y="296" text-anchor="middle">interceptor</text>
+
+      <path class="composition" d="M 2330 314 V 332 H 2042 V 340"/>
+      <path class="composition" d="M 2330 332 V 340"/>
+      <path class="composition" d="M 2330 332 H 2617 V 340"/>
+
+      <rect class="node node-dds" x="1965" y="340" width="215" height="92" rx="10"/>
+      <text class="node-kind" x="2072" y="363" text-anchor="middle">DDS ADAPTER</text>
+      <text class="node-title code" x="2072" y="390" text-anchor="middle">interceptor_dds_adapter</text>
+      <text class="node-api code" x="2072" y="415" text-anchor="middle">Publishers / Subscribers</text>
+
+      <rect class="node node-core" x="2215" y="340" width="230" height="92" rx="10"/>
+      <text class="node-kind" x="2330" y="363" text-anchor="middle">CORE</text>
+      <text class="node-title code" x="2330" y="390" text-anchor="middle">interceptor_core</text>
+      <text class="node-api code" x="2330" y="415" text-anchor="middle">InterceptorStateMachine</text>
+
+      <rect class="node node-adapter" x="2480" y="340" width="215" height="92" rx="10"/>
+      <text class="node-kind" x="2587" y="363" text-anchor="middle">SIMULATION ADAPTER</text>
+      <text class="node-title code" x="2587" y="390" text-anchor="middle">simulated_vehicle_adapter</text>
+      <text class="node-api code" x="2587" y="415" text-anchor="middle">SimulatedVehicle</text>
+
+      <path class="in-process-both" d="M 2185 386 H 2210"/>
+      <path class="in-process-both" d="M 2450 386 H 2475"/>
+
+      <rect class="edge-label-bg" x="1958" y="448" width="365" height="90" rx="8"/>
+      <text class="runtime-label code" x="2140" y="471" text-anchor="middle">DDS ↔ core ports</text>
+      <text class="edge-label code" x="2140" y="493" text-anchor="middle">in: Assignment / Command / TargetTrack</text>
+      <text class="edge-label code" x="2140" y="514" text-anchor="middle">out: DroneState / ExplosionEvent</text>
+
+      <rect class="edge-label-bg" x="2340" y="448" width="357" height="90" rx="8"/>
+      <text class="runtime-label code" x="2518" y="471" text-anchor="middle">core ↔ vehicle ports</text>
+      <text class="edge-label code" x="2518" y="493" text-anchor="middle">PositioningPort / FlightControlPort</text>
+      <text class="edge-label code" x="2518" y="514" text-anchor="middle">InterceptionEffectPort</text>
+
+      <text class="small-note" x="2330" y="566" text-anchor="middle">
+        Deterministic core decisions stay independent of Fast DDS and vehicle hardware.
+      </text>
+    </g>
+
+    <!-- Cross-process DDS topic rows -->
+    <g id="dds-topic-data-space">
+      <rect class="topic-band" x="70" y="620" width="2660" height="262" rx="14"/>
+      <text class="cluster-title" x="94" y="652">Fast DDS data space · five cross-process contracts</text>
+      <text class="cluster-subtitle" x="2580" y="652" text-anchor="end">
+        writer target → Topic + generated wire type → reader target(s)
+      </text>
+
+      <!-- TargetTrack -->
+      <rect class="topic-producer" x="100" y="670" width="515" height="34" rx="8"/>
+      <text class="topic-text code" x="357" y="692" text-anchor="middle">observer_dds_adapter · TargetTrackWriter</text>
+      <path class="dds-flow" d="M 615 687 H 674"/>
+      <rect class="topic-contract" x="685" y="670" width="955" height="34" rx="9"/>
+      <text class="topic-name code" x="1162" y="692" text-anchor="middle">drone.target_tracks · drone::dds::TargetTrack</text>
+      <path class="dds-flow" d="M 1640 687 H 1699"/>
+      <rect class="topic-consumer" x="1710" y="670" width="990" height="34" rx="8"/>
+      <text class="topic-text code" x="2205" y="692" text-anchor="middle">console_dds_adapter + interceptor_dds_adapter · TargetTrackReader</text>
+
+      <!-- DroneState -->
+      <rect class="topic-producer" x="100" y="712" width="515" height="34" rx="8"/>
+      <text class="topic-text code" x="357" y="734" text-anchor="middle">interceptor_dds_adapter · DroneStateWriter</text>
+      <path class="dds-flow" d="M 615 729 H 674"/>
+      <rect class="topic-contract" x="685" y="712" width="955" height="34" rx="9"/>
+      <text class="topic-name code" x="1162" y="734" text-anchor="middle">drone.drone_states · drone::dds::DroneState</text>
+      <path class="dds-flow" d="M 1640 729 H 1699"/>
+      <rect class="topic-consumer" x="1710" y="712" width="990" height="34" rx="8"/>
+      <text class="topic-text code" x="2205" y="734" text-anchor="middle">console_dds_adapter · DroneStateReader</text>
+
+      <!-- Assignment -->
+      <rect class="topic-producer" x="100" y="754" width="515" height="34" rx="8"/>
+      <text class="topic-text code" x="357" y="776" text-anchor="middle">console_dds_adapter · AssignmentWriter</text>
+      <path class="dds-flow" d="M 615 771 H 674"/>
+      <rect class="topic-contract" x="685" y="754" width="955" height="34" rx="9"/>
+      <text class="topic-name code" x="1162" y="776" text-anchor="middle">drone.assignments · drone::dds::Assignment</text>
+      <path class="dds-flow" d="M 1640 771 H 1699"/>
+      <rect class="topic-consumer" x="1710" y="754" width="990" height="34" rx="8"/>
+      <text class="topic-text code" x="2205" y="776" text-anchor="middle">interceptor_dds_adapter · AssignmentReader</text>
+
+      <!-- InterceptionCommand -->
+      <rect class="topic-producer" x="100" y="796" width="515" height="34" rx="8"/>
+      <text class="topic-text code" x="357" y="818" text-anchor="middle">console_dds_adapter · InterceptionCommandWriter</text>
+      <path class="dds-flow" d="M 615 813 H 674"/>
+      <rect class="topic-contract" x="685" y="796" width="955" height="34" rx="9"/>
+      <text class="topic-name code" x="1162" y="818" text-anchor="middle">drone.interception_commands · drone::dds::InterceptionCommand</text>
+      <path class="dds-flow" d="M 1640 813 H 1699"/>
+      <rect class="topic-consumer" x="1710" y="796" width="990" height="34" rx="8"/>
+      <text class="topic-text code" x="2205" y="818" text-anchor="middle">interceptor_dds_adapter · InterceptionCommandReader</text>
+
+      <!-- ExplosionEvent -->
+      <rect class="topic-producer" x="100" y="838" width="515" height="34" rx="8"/>
+      <text class="topic-text code" x="357" y="860" text-anchor="middle">interceptor_dds_adapter · ExplosionEventWriter</text>
+      <path class="dds-flow" d="M 615 855 H 674"/>
+      <rect class="topic-contract" x="685" y="838" width="955" height="34" rx="9"/>
+      <text class="topic-name code" x="1162" y="860" text-anchor="middle">drone.explosion_events · drone::dds::ExplosionEvent</text>
+      <path class="dds-flow" d="M 1640 855 H 1699"/>
+      <rect class="topic-consumer" x="1710" y="838" width="990" height="34" rx="8"/>
+      <text class="topic-text code" x="2205" y="860" text-anchor="middle">console_dds_adapter · ExplosionEventReader</text>
+    </g>
+  </g>
+
+  <!-- Panel 2: direct build dependencies -->
+  <g id="build-panel">
+    <rect class="panel" x="40" y="930" width="2720" height="1030" rx="18"/>
+    <text class="panel-title" x="72" y="974">2 · Production CMake targets and direct API dependencies</text>
+    <text class="panel-subtitle" x="72" y="1000">
+      Every arrow is a direct target_link_libraries edge from the consumer to the provider. API labels name the boundary actually used.
+    </text>
+
+    <!-- Direct dependency paths are drawn behind the target nodes. -->
+    <g id="executable-dependencies">
+      <!-- observer executable fan-out -->
+      <path class="dependency-bus" d="M 420 1100 V 1225 H 195 M 420 1225 H 765"/>
+      <path class="dependency" d="M 195 1225 V 1270"/>
+      <path class="dependency" d="M 480 1225 V 1270"/>
+      <path class="dependency" d="M 765 1225 V 1270"/>
+      <path class="dependency" d="M 680 1065 H 1000 V 1175 H 1120"/>
+
+      <!-- console executable fan-out -->
+      <path class="dependency-bus" d="M 1220 1100 V 1235 H 1135 M 1220 1235 H 1705"/>
+      <path class="dependency" d="M 1135 1235 V 1270"/>
+      <path class="dependency" d="M 1420 1235 V 1270"/>
+      <path class="dependency" d="M 1705 1235 V 1270"/>
+      <path class="dependency" d="M 1400 1100 V 1130"/>
+
+      <!-- interceptor executable fan-out -->
+      <path class="dependency-bus" d="M 2380 1100 V 1225 H 1995 M 2380 1225 H 2565"/>
+      <path class="dependency" d="M 1995 1225 V 1270"/>
+      <path class="dependency" d="M 2280 1225 V 1270"/>
+      <path class="dependency" d="M 2565 1225 V 1270"/>
+      <path class="dependency" d="M 2120 1065 H 1800 V 1175 H 1680"/>
+    </g>
+
+    <g id="library-dependencies">
+      <!-- Observer local API boundaries -->
+      <path class="dependency" d="M 195 1390 V 1430 H 480 V 1395"/>
+      <path class="dependency" d="M 765 1390 V 1470 H 480 V 1395"/>
+      <path class="dependency" d="M 480 1390 V 1520 H 600 V 1750"/>
+      <path class="dependency" d="M 765 1390 V 1555 H 1260 V 1750"/>
+
+      <!-- Console local API boundaries -->
+      <path class="dependency" d="M 1135 1390 V 1430 H 1420 V 1395"/>
+      <path class="dependency" d="M 1705 1390 V 1470 H 1420 V 1395"/>
+      <path class="dependency" d="M 1420 1390 V 1595 H 700 V 1750"/>
+      <path class="dependency" d="M 1705 1390 V 1630 H 1380 V 1750"/>
+
+      <!-- Interceptor local API boundaries -->
+      <path class="dependency" d="M 1995 1390 V 1430 H 2280 V 1395"/>
+      <path class="dependency" d="M 2565 1390 V 1470 H 2280 V 1395"/>
+      <path class="dependency" d="M 2280 1390 V 1680 H 800 V 1750"/>
+      <path class="dependency" d="M 2565 1390 V 1660 H 1500 V 1750"/>
+
+      <!-- Shared-library dependencies -->
+      <path class="dependency" d="M 1080 1810 H 860"/>
+      <path class="dependency" d="M 1600 1810 H 1790"/>
+      <path class="dependency" d="M 2230 1810 H 2388"/>
+      <path class="dependency" d="M 1500 1870 V 1915 H 2555 V 1875"/>
+    </g>
+
+    <!-- Dependency labels -->
+    <g id="dependency-labels">
+      <rect class="edge-label-bg" x="830" y="1151" width="252" height="30" rx="7"/>
+      <text class="edge-label code" x="956" y="1171" text-anchor="middle">startup / shutdown</text>
+      <rect class="edge-label-bg" x="1718" y="1151" width="252" height="30" rx="7"/>
+      <text class="edge-label code" x="1844" y="1171" text-anchor="middle">startup / shutdown</text>
+
+      <text class="edge-label code" x="195" y="1212" text-anchor="middle">SimulatedRadar</text>
+      <text class="edge-label code" x="480" y="1212" text-anchor="middle">TargetTracker</text>
+      <text class="edge-label code" x="765" y="1212" text-anchor="middle">TargetTrackPublisher</text>
+      <text class="edge-label code" x="1135" y="1222" text-anchor="middle">TerminalView</text>
+      <text class="edge-label code" x="1420" y="1222" text-anchor="middle">Projections / UseCases</text>
+      <text class="edge-label code" x="1705" y="1222" text-anchor="middle">DDS adapters</text>
+      <text class="edge-label code" x="1995" y="1212" text-anchor="middle">SimulatedVehicle</text>
+      <text class="edge-label code" x="2280" y="1212" text-anchor="middle">InterceptorStateMachine</text>
+      <text class="edge-label code" x="2565" y="1212" text-anchor="middle">DDS adapters</text>
+
+      <rect class="edge-label-bg" x="244" y="1409" width="212" height="28" rx="7"/>
+      <text class="edge-label code" x="350" y="1428" text-anchor="middle">DetectionInputPort</text>
+      <rect class="edge-label-bg" x="508" y="1450" width="235" height="28" rx="7"/>
+      <text class="edge-label code" x="625" y="1469" text-anchor="middle">TargetTrackOutputPort</text>
+
+      <rect class="edge-label-bg" x="1166" y="1409" width="225" height="28" rx="7"/>
+      <text class="edge-label code" x="1278" y="1428" text-anchor="middle">projection / use-case APIs</text>
+      <rect class="edge-label-bg" x="1453" y="1450" width="228" height="28" rx="7"/>
+      <text class="edge-label code" x="1567" y="1469" text-anchor="middle">five console ports</text>
+
+      <rect class="edge-label-bg" x="2025" y="1409" width="230" height="28" rx="7"/>
+      <text class="edge-label code" x="2140" y="1428" text-anchor="middle">vehicle control ports</text>
+      <rect class="edge-label-bg" x="2310" y="1450" width="230" height="28" rx="7"/>
+      <text class="edge-label code" x="2425" y="1469" text-anchor="middle">five interceptor ports</text>
+
+      <rect class="edge-label-bg" x="500" y="1500" width="226" height="28" rx="7"/>
+      <text class="edge-label code" x="613" y="1519" text-anchor="middle">TargetTrack + values</text>
+      <rect class="edge-label-bg" x="820" y="1535" width="360" height="28" rx="7"/>
+      <text class="edge-label code" x="1000" y="1554" text-anchor="middle">DomainParticipantOwner · TargetTrackWriter</text>
+
+      <rect class="edge-label-bg" x="842" y="1575" width="310" height="28" rx="7"/>
+      <text class="edge-label code" x="997" y="1594" text-anchor="middle">console domain values / events</text>
+      <rect class="edge-label-bg" x="1370" y="1610" width="330" height="28" rx="7"/>
+      <text class="edge-label code" x="1535" y="1629" text-anchor="middle">Owner · 3 Readers · 2 Writers</text>
+
+      <rect class="edge-label-bg" x="1050" y="1660" width="350" height="28" rx="7"/>
+      <text class="edge-label code" x="1225" y="1679" text-anchor="middle">interceptor domain state / intent / event</text>
+      <rect class="edge-label-bg" x="1890" y="1640" width="340" height="28" rx="7"/>
+      <text class="edge-label code" x="2060" y="1659" text-anchor="middle">Owner · 3 Readers · 2 Writers</text>
+
+      <rect class="edge-label-bg" x="870" y="1788" width="202" height="30" rx="7"/>
+      <text class="edge-label code" x="971" y="1808" text-anchor="middle">toWire* / fromWire*</text>
+      <rect class="edge-label-bg" x="1608" y="1788" width="184" height="30" rx="7"/>
+      <text class="edge-label code" x="1700" y="1808" text-anchor="middle">drone::dds::* types</text>
+      <rect class="edge-label-bg" x="2210" y="1788" width="174" height="30" rx="7"/>
+      <text class="edge-label code" x="2297" y="1808" text-anchor="middle">TopicDataType / CDR</text>
+      <rect class="edge-label-bg" x="1750" y="1892" width="548" height="30" rx="7"/>
+      <text class="edge-label code" x="2024" y="1912" text-anchor="middle">DomainParticipant · Topic · DataWriter / DataReader · QoS</text>
+    </g>
+
+    <!-- Executable targets -->
+    <g id="executable-targets">
+      <rect class="node node-executable" x="160" y="1030" width="520" height="70" rx="11"/>
+      <text class="node-kind" x="420" y="1053" text-anchor="middle">EXECUTABLE · COMPOSITION ROOT</text>
+      <text class="node-title code" x="420" y="1082" text-anchor="middle">observer</text>
+
+      <rect class="node node-executable" x="1140" y="1030" width="520" height="70" rx="11"/>
+      <text class="node-kind" x="1400" y="1053" text-anchor="middle">EXECUTABLE · COMPOSITION ROOT</text>
+      <text class="node-title code" x="1400" y="1082" text-anchor="middle">console</text>
+
+      <rect class="node node-executable" x="2120" y="1030" width="520" height="70" rx="11"/>
+      <text class="node-kind" x="2380" y="1053" text-anchor="middle">EXECUTABLE · COMPOSITION ROOT</text>
+      <text class="node-title code" x="2380" y="1082" text-anchor="middle">interceptor</text>
+    </g>
+
+    <!-- Shared process-support target -->
+    <g id="application-support-target">
+      <rect class="node node-shared" x="1120" y="1140" width="560" height="70" rx="11"/>
+      <text class="node-kind" x="1400" y="1162" text-anchor="middle">SHARED LIBRARY · NO PROJECT DEPENDENCIES</text>
+      <text class="node-title code" x="1400" y="1186" text-anchor="middle">application_support</text>
+      <text class="node-api code" x="1400" y="1203" text-anchor="middle">ProcessConfiguration · ShutdownMonitor</text>
+    </g>
+
+    <!-- Participant-specific library targets -->
+    <g id="participant-library-targets">
+      <!-- Observer -->
+      <rect class="node node-adapter" x="70" y="1270" width="250" height="120" rx="11"/>
+      <text class="node-kind" x="195" y="1293" text-anchor="middle">SIMULATION ADAPTER</text>
+      <text class="node-title code" x="195" y="1320" text-anchor="middle">simulated_radar_adapter</text>
+      <text class="node-api code" x="195" y="1347" text-anchor="middle">SimulatedRadar</text>
+      <text class="node-api code" x="195" y="1368" text-anchor="middle">uses DetectionInputPort</text>
+
+      <rect class="node node-core" x="355" y="1270" width="250" height="120" rx="11"/>
+      <text class="node-kind" x="480" y="1293" text-anchor="middle">CORE LIBRARY</text>
+      <text class="node-title code" x="480" y="1320" text-anchor="middle">observer_core</text>
+      <text class="node-api code" x="480" y="1347" text-anchor="middle">TargetTracker</text>
+      <text class="node-api code" x="480" y="1368" text-anchor="middle">Detection / TargetTrack ports</text>
+
+      <rect class="node node-dds" x="640" y="1270" width="250" height="120" rx="11"/>
+      <text class="node-kind" x="765" y="1293" text-anchor="middle">DDS ADAPTER LIBRARY</text>
+      <text class="node-title code" x="765" y="1320" text-anchor="middle">observer_dds_adapter</text>
+      <text class="node-api code" x="765" y="1347" text-anchor="middle">TargetTrackPublisher</text>
+      <text class="node-api code" x="765" y="1368" text-anchor="middle">implements output port</text>
+
+      <!-- Console -->
+      <rect class="node node-adapter" x="1010" y="1270" width="250" height="120" rx="11"/>
+      <text class="node-kind" x="1135" y="1293" text-anchor="middle">UI ADAPTER LIBRARY</text>
+      <text class="node-title code" x="1135" y="1320" text-anchor="middle">console_ui_adapter</text>
+      <text class="node-api code" x="1135" y="1347" text-anchor="middle">TerminalView / Action</text>
+      <text class="node-api code" x="1135" y="1368" text-anchor="middle">uses projections / use case</text>
+
+      <rect class="node node-core" x="1295" y="1270" width="250" height="120" rx="11"/>
+      <text class="node-kind" x="1420" y="1293" text-anchor="middle">CORE LIBRARY</text>
+      <text class="node-title code" x="1420" y="1320" text-anchor="middle">console_core</text>
+      <text class="node-api code" x="1420" y="1347" text-anchor="middle">3 projections · 2 use cases</text>
+      <text class="node-api code" x="1420" y="1368" text-anchor="middle">3 input · 2 output ports</text>
+
+      <rect class="node node-dds" x="1580" y="1270" width="250" height="120" rx="11"/>
+      <text class="node-kind" x="1705" y="1293" text-anchor="middle">DDS ADAPTER LIBRARY</text>
+      <text class="node-title code" x="1705" y="1320" text-anchor="middle">console_dds_adapter</text>
+      <text class="node-api code" x="1705" y="1347" text-anchor="middle">Console / Event Subscriber</text>
+      <text class="node-api code" x="1705" y="1368" text-anchor="middle">Assignment / Command Publisher</text>
+
+      <!-- Interceptor -->
+      <rect class="node node-adapter" x="1870" y="1270" width="250" height="120" rx="11"/>
+      <text class="node-kind" x="1995" y="1293" text-anchor="middle">SIMULATION ADAPTER</text>
+      <text class="node-title code" x="1995" y="1320" text-anchor="middle">simulated_vehicle_adapter</text>
+      <text class="node-api code" x="1995" y="1347" text-anchor="middle">SimulatedVehicle</text>
+      <text class="node-api code" x="1995" y="1368" text-anchor="middle">implements 3 vehicle ports</text>
+
+      <rect class="node node-core" x="2155" y="1270" width="250" height="120" rx="11"/>
+      <text class="node-kind" x="2280" y="1293" text-anchor="middle">CORE LIBRARY</text>
+      <text class="node-title code" x="2280" y="1320" text-anchor="middle">interceptor_core</text>
+      <text class="node-api code" x="2280" y="1347" text-anchor="middle">InterceptorStateMachine</text>
+      <text class="node-api code" x="2280" y="1368" text-anchor="middle">8 input / output ports</text>
+
+      <rect class="node node-dds" x="2440" y="1270" width="250" height="120" rx="11"/>
+      <text class="node-kind" x="2565" y="1293" text-anchor="middle">DDS ADAPTER LIBRARY</text>
+      <text class="node-title code" x="2565" y="1320" text-anchor="middle">interceptor_dds_adapter</text>
+      <text class="node-api code" x="2565" y="1347" text-anchor="middle">3 Subscribers · 2 Publishers</text>
+      <text class="node-api code" x="2565" y="1368" text-anchor="middle">implements / consumes ports</text>
+    </g>
+
+    <!-- Shared and external targets -->
+    <g id="shared-targets">
+      <rect class="node node-domain" x="350" y="1750" width="510" height="125" rx="12"/>
+      <text class="node-kind" x="605" y="1775" text-anchor="middle">INNERMOST LIBRARY · STANDARD LIBRARY ONLY</text>
+      <text class="node-title code" x="605" y="1804" text-anchor="middle">drone_domain</text>
+      <text class="node-api code" x="605" y="1832" text-anchor="middle">IDs · Position · Timestamp · TargetTrack · DroneState</text>
+      <text class="node-api code" x="605" y="1854" text-anchor="middle">Assignment · InterceptionCommand · ExplosionEvent</text>
+
+      <rect class="node node-shared" x="1080" y="1750" width="520" height="125" rx="12"/>
+      <text class="node-kind" x="1340" y="1775" text-anchor="middle">SHARED DDS TRANSPORT LIBRARY</text>
+      <text class="node-title code" x="1340" y="1804" text-anchor="middle">drone_dds_transport</text>
+      <text class="node-api code" x="1340" y="1832" text-anchor="middle">DomainParticipantOwner · Topic catalog / QoS</text>
+      <text class="node-api code" x="1340" y="1854" text-anchor="middle">5 Readers · 5 Writers · domain ↔ wire mappings</text>
+
+      <rect class="node node-shared" x="1790" y="1750" width="440" height="125" rx="12"/>
+      <text class="node-kind" x="2010" y="1775" text-anchor="middle">GENERATED WIRE-TYPE LIBRARY</text>
+      <text class="node-title code" x="2010" y="1804" text-anchor="middle">drone_dds_types</text>
+      <text class="node-api code" x="2010" y="1832" text-anchor="middle">IDL-generated drone::dds::* structs</text>
+      <text class="node-api code" x="2010" y="1854" text-anchor="middle">generated *PubSubType support</text>
+
+      <rect class="node node-external" x="2390" y="1750" width="340" height="125" rx="12"/>
+      <text class="node-kind" x="2560" y="1775" text-anchor="middle">EXTERNAL DEPENDENCIES</text>
+      <text class="node-title code" x="2560" y="1804" text-anchor="middle">Fast DDS / Fast CDR</text>
+      <text class="node-api code" x="2560" y="1832" text-anchor="middle">DCPS entities · discovery · QoS</text>
+      <text class="node-api code" x="2560" y="1854" text-anchor="middle">RTPS transport · serialization</text>
+    </g>
+
+    <text class="small-note" x="72" y="1934">
+      Scope: production targets only. Test executables and process_test_support are intentionally omitted. This diagram does not advance ROADMAP step 48.
+    </text>
+  </g>
+</svg>
